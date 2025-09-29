@@ -135,8 +135,10 @@ clean_all <- function(df) {                                                # def
     }
 
   # ---- Province-level mean geolocation (for conservative imputation) ---------
-  prov_means <- df1 %>%                                                    # compute province means using available points
-    filter(!is.na(Latitude) & !is.na(Longitude)) %>%                       # retain only rows with complete coordinate pairs
+  complete_coords <- df1 %>%                                               # restrict to rows with complete coordinate pairs
+    filter(!is.na(Latitude) & !is.na(Longitude))                           # exclude any partial geocoordinate entries
+
+  prov_means <- complete_coords %>%                                        # compute province means using only observed pairs
     group_by(Province) %>%                                                 # group by normalized Province
     summarise(
       mean_lat = mean(Latitude),                                           # province mean latitude (complete cases only)
@@ -146,9 +148,11 @@ clean_all <- function(df) {                                                # def
 
   # ---- Impute BOTH coordinates only when BOTH are missing --------------------
   df2 <- df1 %>%                                                           # continue cleaning pipeline
-    left_join(prov_means, by = "Province") %>%                             # attach province-level means
     mutate(
-      .both_na = is.na(Latitude) & is.na(Longitude),                        # flag rows with both coordinates missing
+      .both_na = is.na(Latitude) & is.na(Longitude)                         # flag rows with both coordinates missing
+    ) %>%
+    left_join(prov_means, by = "Province") %>%                             # attach filtered province-level means
+    mutate(
       Latitude  = ifelse(.both_na & !is.na(mean_lat) & !is.na(mean_lon),    # if both missing and province means exist
                          mean_lat,                                          #   impute latitude with province mean
                          Latitude),                                         # else keep original
