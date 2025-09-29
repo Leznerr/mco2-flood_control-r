@@ -136,10 +136,11 @@ clean_all <- function(df) {                                                # def
 
   # ---- Province-level mean geolocation (for conservative imputation) ---------
   prov_means <- df1 %>%                                                    # compute province means using available points
+    filter(!is.na(Latitude) & !is.na(Longitude)) %>%                       # retain only rows with complete coordinate pairs
     group_by(Province) %>%                                                 # group by normalized Province
     summarise(
-      mean_lat = mean(Latitude,  na.rm = TRUE),                            # province mean latitude (NA if none)
-      mean_lon = mean(Longitude, na.rm = TRUE),                            # province mean longitude (NA if none)
+      mean_lat = mean(Latitude),                                           # province mean latitude (complete cases only)
+      mean_lon = mean(Longitude),                                          # province mean longitude (complete cases only)
       .groups  = "drop"                                                    # drop grouping to avoid downstream carry-over
     )
 
