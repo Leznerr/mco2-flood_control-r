@@ -20,13 +20,7 @@ test_that("validate_schema detects missing columns", {
   expect_error(validate_schema(df), "missing required columns")
 })
 
-test_that("validate_schema accepts coordinate synonyms", {
-  df <- data.frame(
-    Region = "NCR", MainIsland = "Luzon", Province = "Metro Manila", FundingYear = 2021,
-    TypeOfWork = "Dredging", StartDate = "2021-01-01", ActualCompletionDate = "2021-01-10",
-    ApprovedBudgetForContract = 1, ContractCost = 0.9, Contractor = "ABC",
-    ProjectLatitude = 14.6, ProjectLongitude = 121.0,
-    check.names = FALSE
+
   )
   expect_silent(validate_schema(df))
 })

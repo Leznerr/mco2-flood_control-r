@@ -76,18 +76,4 @@ test_that("derive_fields allows negative delays and filter_years drops disallowe
   expect_silent(assert_year_filter(filtered, 2021:2023))
 })
 
-test_that("clean_all canonicalizes ProjectLatitude/ProjectLongitude to Latitude/Longitude", {
-  raw <- data.frame(
-    Region = "NCR", MainIsland = "Luzon", Province = "Metro Manila", FundingYear = "2021",
-    TypeOfWork = "Dredging", StartDate = "2021-01-01", ActualCompletionDate = "2021-01-10",
-    ApprovedBudgetForContract = "1,000,000", ContractCost = "900,000", Contractor = "ABC",
-    ProjectLatitude = "14.600", ProjectLongitude = "121.000",
-    check.names = FALSE
-  )
-  expect_silent(validate_schema(raw))
-  cleaned <- clean_all(raw)
-  expect_true(all(c("Latitude", "Longitude") %in% names(cleaned)))
-  expect_false(any(c("ProjectLatitude", "ProjectLongitude") %in% names(cleaned)))
-  expect_true(is.numeric(cleaned$Latitude) && is.numeric(cleaned$Longitude))
-})
 

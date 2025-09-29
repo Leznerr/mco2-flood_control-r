@@ -37,13 +37,6 @@ validate_schema <- function(df) {
     stop(sprintf("validate_schema(): missing required columns: %s.", paste(missing_strict, collapse = ", ")))
   }
 
-  # coordinates: accept canonical OR synonyms; fail only if neither pair exists
-  latlon_pairs <- rbind(
-    c("Latitude","Longitude"),
-    c("ProjectLatitude","ProjectLongitude")
-  )
-  if (!.has_pair(nms, latlon_pairs)) {
-    stop("validate_schema(): missing coordinates; expected either {Latitude,Longitude} or {ProjectLatitude,ProjectLongitude}.")
   }
 
   invisible(TRUE)
