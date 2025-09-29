@@ -32,3 +32,19 @@ test_that("report 1 computes efficiency metrics within bounds", {
   expect_equal(report$Delay30Rate, c(100, 0))
 })
 
+test_that("report 1 handles all-NA groups without crashing", {
+  df <- tibble(
+    Region = c("Region C", "Region C"),
+    MainIsland = c("Island 3", "Island 3"),
+    ApprovedBudgetForContract = c(NA_real_, NA_real_),
+    ContractCost = c(NA_real_, NA_real_),
+    CostSavings = c(NA_real_, NA_real_),
+    CompletionDelayDays = c(NA_real_, NA_real_)
+  )
+  report <- report_regional_efficiency(df)
+  expect_true(all(is.na(report$MedianSavings)))
+  expect_true(all(is.na(report$AvgDelay)))
+  expect_true(all(is.na(report$Delay30Rate)))
+  expect_true(all(is.na(report$EfficiencyScore)))
+})
+
