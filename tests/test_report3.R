@@ -30,3 +30,15 @@ test_that("report 3 applies baseline logic correctly", {
   expect_equal(report$FundingYear, sort(report$FundingYear))
 })
 
+test_that("report 3 survives all-NA savings groups", {
+  df <- tibble(
+    FundingYear = c(2021L, 2022L),
+    TypeOfWork = c("Type C", "Type C"),
+    CostSavings = c(NA_real_, NA_real_)
+  )
+  report <- report_overrun_trends(df)
+  expect_true(all(is.na(report$AvgSavings)))
+  expect_true(all(is.na(report$OverrunRate)))
+  expect_true(all(is.na(report$YoY_vs_2021)))
+})
+
