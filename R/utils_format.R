@@ -33,6 +33,9 @@ safe_sum <- function(x) {                                   # compute sum with N
 minmax_0_100 <- function(x) {                               # rescale numeric vector to [0,100]
   if (length(x) == 0L) return(numeric())                    # empty input -> empty output
   x <- as.numeric(x)
+  if (!any(is.finite(x))) {                                 # all values missing/non-finite -> return all NA
+    return(rep(NA_real_, length(x)))
+  }
   range <- range(x, na.rm = TRUE)
   if (any(is.infinite(range))) {                            # handle degenerate case with all NA
     return(rep(NA_real_, length(x)))
