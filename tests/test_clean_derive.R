@@ -44,6 +44,21 @@ test_that("clean_all parses dates, money, and imputes geo conservatively", {
   expect_equal(cleaned$TypeOfWork[1], "mixed CASE")
 })
 
+test_that("clean_all canonicalizes ProjectLatitude/ProjectLongitude", {
+  raw <- data.frame(
+    Region = "NCR", MainIsland = "Luzon", Province = "Metro Manila", FundingYear = "2021",
+    TypeOfWork = "Dredging", StartDate = "2021-01-01", ActualCompletionDate = "2021-01-10",
+    ApprovedBudgetForContract = "1,000,000", ContractCost = "900,000", Contractor = "ABC",
+    ProjectLatitude = "14.600", ProjectLongitude = "121.000",
+    check.names = FALSE
+  )
+  validate_schema(raw)
+  out <- clean_all(raw)
+  expect_true(all(c("Latitude","Longitude") %in% names(out)))
+  expect_false(any(c("ProjectLatitude","ProjectLongitude") %in% names(out)))
+  expect_true(is.numeric(out$Latitude) && is.numeric(out$Longitude))
+})
+
 test_that("derive_fields computes savings and delays", {
   raw <- tibble(
     Region = "A", MainIsland = "B", Province = "C", FundingYear = 2021L,
