@@ -87,8 +87,19 @@ ingest_csv <- function(path) {                                            # defi
     guess_max      = DEFAULT_GUESS_MAX,                                   # sample size for robust type guessing
     na             = NA_TOKENS,                                           # strings to treat as missing values
     locale         = read_locale,                                         # fixed UTF-8 locale for stability
+    col_names      = TRUE,                                                # keep the original header row intact
+    name_repair    = "minimal",                                          # preserve raw header names (allow duplicates)
     show_col_types = FALSE                                                # suppress verbose type printing
   )
+
+  # ---- Header integrity: duplicated column names are disallowed --------------
+  dup_names <- names(df)[duplicated(names(df))]                            # find duplicated header names
+  if (length(dup_names) > 0L) {                                            # if any duplicates found
+    stop(sprintf(                                                          # fail-fast with a precise list
+      "ingest_csv(): duplicated column names detected: %s. Fix the header and retry.",
+      paste(sort(unique(dup_names)), collapse = ", ")
+    ))
+  }
 
   # ---- Shape validation -------------------------------------------------------
   n_rows <- nrow(df)                                                      # capture number of data rows read
@@ -98,15 +109,6 @@ ingest_csv <- function(path) {                                            # defi
   }
   if (n_cols == 0L) {                                                     # check for zero columns (malformed CSV)
     stop(sprintf("ingest_csv(): '%s' loaded but contains zero columns.", path))   # fail-fast if header missing
-  }
-
-  # ---- Header integrity: duplicated column names are disallowed --------------
-  dup_names <- names(df)[duplicated(names(df))]                            # find duplicated header names
-  if (length(dup_names) > 0L) {                                            # if any duplicates found
-    stop(sprintf(                                                          # fail-fast with a precise list
-      "ingest_csv(): duplicated column names detected: %s. Fix the header and retry.",
-      paste(sort(unique(dup_names)), collapse = ", ")
-    ))
   }
 
   # ---- Parse issue collection (diagnostics, not fatal by default) ------------
