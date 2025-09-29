@@ -91,6 +91,21 @@ clean_all <- function(df) {                                                # def
     stop("clean_all(): 'df' must be a data.frame/tibble from ingest_csv().")# fail-fast with actionable message
   }
 
+  # ---- Canonicalize coordinate column names (accept synonyms) ----------------
+  # If Latitude/Longitude are absent but ProjectLatitude/ProjectLongitude exist,
+  # rename the latter to the canonical names so all downstream steps use one pair.
+  if (!("Latitude" %in% names(df)) && all(c("ProjectLatitude", "ProjectLongitude") %in% names(df))) {
+    # If both canonical and synonym pairs exist, prefer canonical and ignore synonyms.
+    if (all(c("Latitude", "Longitude") %in% names(df))) {
+      if (exists("log_warn", mode = "function")) {
+        log_warn("Both coordinate pairs present; using canonical Latitude/Longitude; ignoring ProjectLatitude/ProjectLongitude.")
+      }
+    } else {
+      names(df)[match("ProjectLatitude", names(df))]  <- "Latitude"
+      names(df)[match("ProjectLongitude", names(df))] <- "Longitude"
+    }
+  }
+
   # ---- Preserve original column set and order --------------------------------
   orig_cols <- names(df)                                                   # snapshot original header for schema integrity
 

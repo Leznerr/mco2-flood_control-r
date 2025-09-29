@@ -44,3 +44,16 @@ test_that("report 2 enforces eligibility and ranking rules", {
   expect_equal(risk, "High Risk")
 })
 
+test_that("report 2 applies the NProjects threshold correctly", {
+  df <- dplyr::bind_rows(
+    make_contractor("Firm 4", n = 4),
+    make_contractor("Firm 5", n = 5, cost = 200, savings = 100, delay = -10),
+    make_contractor("Firm 6", n = 6, cost = 150, savings = 20, delay = 5)
+  )
+  report <- report_contractor_ranking(df)
+  expect_false("Firm 4" %in% report$Contractor)
+  expect_true("Firm 5" %in% report$Contractor)
+  expect_true("Firm 6" %in% report$Contractor)
+  expect_true(all(report$ReliabilityIndex <= 100, na.rm = TRUE))
+})
+

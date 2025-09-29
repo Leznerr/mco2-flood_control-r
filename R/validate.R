@@ -1,60 +1,61 @@
 # validate.R
 # ------------------------------------------------------------------------------
-# Purpose   : Perform schema and invariant checks on the ingested dataset before
-#             heavy transformations occur. Ensures required headers exist and
-#             critical columns are well-formed.
-# Contract  :
-#   - validate_schema(df) stops with informative errors when the dataset is not
-#     usable (missing headers, duplicates, empty, FundingYear not numeric-like).
-#   - assert_year_filter(df, allowed_years) verifies FundingYear ∈ allowed set.
-# Rubric    : Correctness (fail-fast), Simplicity, Readability (formal comments).
+# Purpose : Schema/type/invariant checks for the DPWH flood-control CSV.
+# Contract: validate_schema(df) -> invisible(TRUE) or stop() on violations
+#           assert_year_filter(df, allowed_years=2021:2023) -> invisible(TRUE)
+# Notes   : Accepts either {Latitude,Longitude} OR {ProjectLatitude,ProjectLongitude}.
 # ------------------------------------------------------------------------------
 
-suppressPackageStartupMessages({                             # ensures quiet load in tests/CLI
-  library(readr)
-})
+.has_pair <- function(nms, pairs) {
+  any(apply(pairs, 1L, function(p) all(p %in% nms)))
+}
 
-.required_cols <- c(
-  "Region", "MainIsland", "Province", "FundingYear", "TypeOfWork",
-  "StartDate", "ActualCompletionDate", "ApprovedBudgetForContract",
-  "ContractCost", "Contractor", "Latitude", "Longitude"
-)
+validate_schema <- function(df) {
+  if (missing(df) || !is.data.frame(df)) {
+    stop("validate_schema(): 'df' must be a data.frame/tibble from ingest_csv().")
+  }
+  nms <- names(df)
+  if (length(nms) == 0L) stop("validate_schema(): dataframe has zero columns.")
+  if (nrow(df) == 0L)   stop("validate_schema(): dataframe has zero rows (no data).")
 
-validate_schema <- function(df) {                            # schema guard for ingested table
-  if (!is.data.frame(df)) {
-    stop("validate_schema(): 'df' must be a data frame from ingest_csv().")
+  dups <- nms[duplicated(nms)]
+  if (length(dups) > 0L) {
+    stop(sprintf("validate_schema(): duplicated column names: %s.", paste(sort(unique(dups)), collapse = ', ')))
   }
-  if (nrow(df) == 0L) {
-    stop("validate_schema(): dataset contains zero rows.")
+
+  required_strict <- c(
+    "Region","MainIsland","Province","FundingYear","TypeOfWork",
+    "StartDate","ActualCompletionDate","ApprovedBudgetForContract",
+    "ContractCost","Contractor"
+  )
+  missing_strict <- setdiff(required_strict, nms)
+  if (length(missing_strict) > 0L) {
+    stop(sprintf("validate_schema(): missing required columns: %s.", paste(missing_strict, collapse = ", ")))
   }
-  headers <- names(df)
-  dup <- headers[duplicated(headers)]
-  if (length(dup) > 0L) {
-    stop(sprintf("validate_schema(): duplicated column names: %s.", paste(unique(dup), collapse = ", ")))
+
+  latlon_pairs <- rbind(
+    c("Latitude","Longitude"),
+    c("ProjectLatitude","ProjectLongitude")
+  )
+  if (!.has_pair(nms, latlon_pairs)) {
+    stop("validate_schema(): missing coordinates; expected either {Latitude,Longitude} or {ProjectLatitude,ProjectLongitude}.")
   }
-  missing_cols <- setdiff(.required_cols, headers)
-  if (length(missing_cols) > 0L) {
-    stop(sprintf("validate_schema(): missing required columns: %s.", paste(missing_cols, collapse = ", ")))
-  }
-  fy <- df[["FundingYear"]]
-  parsed <- suppressWarnings(readr::parse_number(fy))
-  coercible <- is.na(fy) | (!is.na(parsed) & abs(parsed - round(parsed)) < 1e-6)
-  if (any(!coercible)) {
-    stop("validate_schema(): FundingYear values must be coercible to integers.")
-  }
+
   invisible(TRUE)
 }
 
-assert_year_filter <- function(df, allowed_years = 2021:2023) {  # ensure filtered dataset has expected FundingYear
-  if (!is.data.frame(df) || is.null(df$FundingYear)) {
-    stop("assert_year_filter(): 'df' must have a FundingYear column.")
+assert_year_filter <- function(df, allowed_years = 2021:2023) {
+  if (missing(df) || !is.data.frame(df)) {
+    stop("assert_year_filter(): 'df' must be a data.frame/tibble.")
   }
-  allowed_years <- as.integer(allowed_years)
-  fy <- unique(df$FundingYear)
-  invalid <- fy[is.na(fy) | !(fy %in% allowed_years)]
-  if (length(invalid) > 0L) {
-    stop(sprintf("assert_year_filter(): unexpected FundingYear values: %s.", paste(sort(invalid), collapse = ", ")))
+  if (!"FundingYear" %in% names(df)) {
+    stop("assert_year_filter(): 'FundingYear' column is missing.")
+  }
+  vals <- unique(stats::na.omit(df$FundingYear))
+  bad  <- setdiff(vals, allowed_years)
+  if (length(bad) > 0L) {
+    stop(sprintf("assert_year_filter(): found disallowed FundingYear values: %s; allowed: %s.",
+                 paste(sort(bad), collapse = ", "), paste(allowed_years, collapse = ", ")))
   }
   invisible(TRUE)
 }
-
