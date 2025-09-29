@@ -28,13 +28,13 @@ suppressPackageStartupMessages({                                           # sup
 
 .log_info <- function(fmt, ...) {                                          # define informational logger (printf-style)
   msg <- sprintf(fmt, ...)                                                 # format message once
-  if (exists("log_info", mode = "function")) log_info("{msg}")             # delegate to project logger if available
+  if (exists("log_info", mode = "function")) log_info("%s", msg)            # delegate to project logger if available
   else message(sprintf("[INFO]  %s", msg))                                 # otherwise print standardized INFO line
 }
 
 .log_warn <- function(fmt, ...) {                                          # define warning logger (printf-style)
   msg <- sprintf(fmt, ...)                                                 # format message once
-  if (exists("log_warn", mode = "function")) log_warn("{msg}")             # delegate to project logger if available
+  if (exists("log_warn", mode = "function")) log_warn("%s", msg)            # delegate to project logger if available
   else message(sprintf("[WARN]  %s", msg))                                 # otherwise print standardized WARN line
 }
 

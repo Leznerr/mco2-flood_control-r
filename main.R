@@ -138,7 +138,12 @@ tryCatch(                                                # wrap execution to sur
     main()                                               # invoke main orchestration function
   },
   error = function(e) {                                  # handle any error thrown during pipeline execution
-    log_error("%s", conditionMessage(e))                 # log standardized error line via project logger
+    msg <- conditionMessage(e)
+    if (exists("log_error", mode = "function")) {
+      log_error("%s", msg)
+    } else {
+      message(sprintf("[ERROR] %s", msg))
+    }
     quit(save = "no", status = 1L)                       # exit with failure status for CI/grading
   }
 )

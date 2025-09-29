@@ -33,7 +33,7 @@ ALLOW_BOM <- TRUE  # boolean; informational only (readr::read_csv strips BOM saf
 .log_info <- function(fmt, ...) {                                        # define function for info logs
   msg <- sprintf(fmt, ...)                                               # format the message string
   if (exists("log_info", mode = "function")) {                           # if project-wide logger exists
-    log_info("{msg}")                                                    # delegate to project logger
+    log_info("%s", msg)                                                 # delegate to project logger with printf semantics
   } else {                                                               # otherwise fallback to base message
     message(sprintf("[INFO]  %s", msg))                                  # print standardized info log
   }
@@ -43,7 +43,7 @@ ALLOW_BOM <- TRUE  # boolean; informational only (readr::read_csv strips BOM saf
 .log_warn <- function(fmt, ...) {                                        # define function for warn logs
   msg <- sprintf(fmt, ...)                                               # format the message string
   if (exists("log_warn", mode = "function")) {                           # if project-wide logger exists
-    log_warn("{msg}")                                                    # delegate to project logger
+    log_warn("%s", msg)                                                 # delegate to project logger with printf semantics
   } else {                                                               # otherwise fallback to base message
     message(sprintf("[WARN]  %s", msg))                                  # print standardized warn log
   }
