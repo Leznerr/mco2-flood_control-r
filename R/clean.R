@@ -92,14 +92,7 @@ clean_all <- function(df) {                                                # def
   }
 
   # ---- Canonicalize coordinate column names (accept synonyms) ----------------
-  has_canonical <- all(c("Latitude", "Longitude") %in% names(df))
-  has_synonym   <- all(c("ProjectLatitude", "ProjectLongitude") %in% names(df))
-  if (!has_canonical && has_synonym) {
-    names(df)[match("ProjectLatitude", names(df))]  <- "Latitude"
-    names(df)[match("ProjectLongitude", names(df))] <- "Longitude"
-  } else if (has_canonical && has_synonym) {
-    .log_warn("Both coordinate pairs present; using Latitude/Longitude and dropping ProjectLatitude/ProjectLongitude.")
-    df <- df[, setdiff(names(df), c("ProjectLatitude", "ProjectLongitude")), drop = FALSE]
+
   }
 
   # ---- Preserve original column set and order --------------------------------
