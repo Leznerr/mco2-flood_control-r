@@ -1,0 +1,17 @@
+Region,MainIsland,Province,FundingYear,TypeOfWork,StartDate,ActualCompletionDate,ApprovedBudgetForContract,ContractCost,Contractor,Latitude,Longitude
+national capital region,luzon,metro manila,2021,Floodwall Construction,2021-01-15,2021-04-20,Php 120,000,000.00,110,000,000,delta dredgers inc,14.60,121.00
+national capital region,luzon,metro manila,2022,Drainage Improvement,02/10/2022,05/18/2022,130000000,132000000,delta dredgers inc,14.63,121.05
+central luzon,luzon,bulacan,2021,River Dredging,2021/03/05,2021/07/10,80,500,000,78,250,000,delta dredgers inc,14.90,120.90
+central luzon,luzon,bulacan,2022,Levee Rehabilitation,2022-04-12,2022-09-20,82,000,000,81,500,000,delta dredgers inc,,
+central luzon,luzon,pampanga,2023,Spillway Construction,04-15-2023,10-01-2023,91,000,000,89,000,000,delta dredgers inc,15.08,120.68
+western visayas,visayas,iloilo,2023,Drainage Improvement,2023-02-01,2023-08-18,70,000,000,68,500,000,delta dredgers inc,10.72,122.56
+central visayas,visayas,cebu,2021,Floodwall Construction,2021-05-10,2021-12-15,60,000,000,59,000,000,aqua shield builders,10.31,123.89
+central visayas,visayas,cebu,2022,Drainage Improvement,2022-01-05,2022-05-30,55,000,000,54,500,000,aqua shield builders,10.32,123.90
+davao region,mindanao,davao del sur,2022,River Dredging,2022-06-01,2022-12-01,65,000,000,65,500,000,aqua shield builders,7.07,125.61
+davao region,mindanao,davao del sur,2023,Levee Rehabilitation,2023-03-12,2023-09-18,68,000,000,67,000,000,aqua shield builders,7.08,125.60
+caraga,mindanao,agusan del norte,2021,Spillway Construction,2021-02-20,2021-10-05,74,000,000,73,800,000,river guardians consortium,9.07,125.59
+caraga,mindanao,agusan del norte,2022,Drainage Improvement,2022-02-15,2022-11-30,76,000,000,75,500,000,river guardians consortium,9.10,125.60
+bangsamoro autonomous region,mindanao,maguindanao del norte,2022,Floodwall Construction,2022-05-10,2022-09-22,66,000,000,66,800,000,river guardians consortium,7.20,124.25
+bangsamoro autonomous region,mindanao,maguindanao del norte,2023,Levee Rehabilitation,2023-01-18,2023-07-29,69,500,000,68,900,000,river guardians consortium,,
+bicol region,luzon,albay,2023,River Dredging,2023-04-01,2023-11-20,72,000,000,71,200,000,river guardians consortium,200,123.70
+national capital region,luzon,metro manila,2024,Drainage Improvement,2024-01-05,2024-06-30,125,000,000,124,000,000,delta dredgers inc,14.60,121.02
