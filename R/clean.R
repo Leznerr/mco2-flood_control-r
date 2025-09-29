@@ -87,19 +87,7 @@ suppressPackageStartupMessages({                                           # sup
 #'         conservative province-mean geolocation imputation.
 clean_all <- function(df) {                                                # define main cleaning function
   # ---- Preconditions ----------------------------------------------------------
-  if (missing(df) || !is.data.frame(df)) {                                 # ensure input is a data.frame/tibble
-    stop("clean_all(): 'df' must be a data.frame/tibble from ingest_csv().")# fail-fast with actionable message
-  }
 
-  # ---- Canonicalize coordinate column names (accept synonyms) ----------------
-
-  }
-
-  # ---- Preserve original column set and order --------------------------------
-  orig_cols <- names(df)                                                   # snapshot original header for schema integrity
-
-  # ---- NA snapshot BEFORE cleaning (for delta logs) --------------------------
-  na_before <- list(                                                       # collect NA counts for key fields pre-clean
     StartDate = sum(is.na(df[["StartDate"]])),                             # NA count in StartDate
     ActualCompletionDate = sum(is.na(df[["ActualCompletionDate"]])),       # NA count in ActualCompletionDate
     ABC = sum(is.na(df[["ApprovedBudgetForContract"]])),                   # NA count in ApprovedBudgetForContract

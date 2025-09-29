@@ -31,6 +31,6 @@ test_that("validate_schema detects missing columns", {
 
 test_that("assert_year_filter detects unexpected years", {
   df <- tibble(FundingYear = c(2021L, 2024L))
-  expect_error(assert_year_filter(df, 2021:2023), "unexpected FundingYear")
+  expect_error(assert_year_filter(df, 2021:2023), "found disallowed FundingYear")
 })
 
