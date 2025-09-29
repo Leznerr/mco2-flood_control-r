@@ -76,3 +76,4 @@ test_that("derive_fields allows negative delays and filter_years drops disallowe
   expect_silent(assert_year_filter(filtered, 2021:2023))
 })
 
+
