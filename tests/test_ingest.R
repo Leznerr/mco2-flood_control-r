@@ -26,6 +26,13 @@ test_that("ingest rejects zero-row files", {
   expect_error(ingest_csv(tmp), "zero data rows")
 })
 
+test_that("ingest rejects truly empty files", {
+  tmp <- tempfile(fileext = ".csv")
+  on.exit(unlink(tmp), add = TRUE)
+  file.create(tmp)
+  expect_error(ingest_csv(tmp), "empty or unreadable")
+})
+
 test_that("ingest detects duplicate headers", {
   tmp <- tempfile(fileext = ".csv")
   on.exit(unlink(tmp), add = TRUE)

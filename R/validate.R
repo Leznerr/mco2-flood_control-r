@@ -36,6 +36,10 @@ validate_schema <- function(df) {                            # schema guard for 
   if (length(missing_cols) > 0L) {
     stop(sprintf("validate_schema(): missing required columns: %s.", paste(missing_cols, collapse = ", ")))
   }
+  extra_cols <- setdiff(headers, .required_cols)
+  if (length(extra_cols) > 0L) {
+    stop(sprintf("validate_schema(): unexpected extra columns present: %s.", paste(extra_cols, collapse = ", ")))
+  }
   fy <- df[["FundingYear"]]
   parsed <- suppressWarnings(readr::parse_number(fy))
   coercible <- is.na(fy) | (!is.na(parsed) & abs(parsed - round(parsed)) < 1e-6)
