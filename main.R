@@ -61,6 +61,12 @@ suppressPackageStartupMessages({                            # suppress package b
   with_log_context(list(stage = "ingest"), {
     df_raw <<- ingest_csv(args$input)
     rows_loaded <<- nrow(df_raw)
+    log_info(
+      "diagnostic: class(raw)=%s; nrow=%s; names[1:5]=%s",
+      paste(class(df_raw), collapse = "/"),
+      NROW(df_raw),
+      paste(utils::head(names(df_raw), 5), collapse = ",")
+    )
   })
 
   with_log_context(list(stage = "validate"), {
