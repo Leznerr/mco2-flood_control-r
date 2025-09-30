@@ -23,7 +23,7 @@ report_regional_efficiency <- function(df) {                 # build report 1 su
       AvgDelay = safe_mean(CompletionDelayDays),
       Delay30Rate = 100 * safe_mean(CompletionDelayDays > 30),
       EfficiencyRaw = {
-        adj_delay <- dplyr::if_else(is.na(AvgDelay) | abs(AvgDelay) < 1e-6, NA_real_, AvgDelay)
+
         ifelse(!is.na(MedianSavings) & !is.na(adj_delay), (MedianSavings / adj_delay) * 100, NA_real_)
       },
       .groups = "drop"
