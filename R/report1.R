@@ -2,8 +2,8 @@
 # ------------------------------------------------------------------------------
 # Purpose   : Produce the Regional Flood Mitigation Efficiency report.
 # Contract  : report_regional_efficiency(df) -> tibble with columns
-#   Region, MainIsland, TotalBudget, MedianSavings, AvgDelay,
-#   HighDelayPct, EfficiencyScore (sorted by EfficiencyScore desc).
+#   Region, MainIsland, TotalApprovedBudget, MedianSavings, AvgDelay,
+#   Delay30Rate, EfficiencyScore (sorted by EfficiencyScore desc).
 # Rubric    : Correctness (aggregations & min-max normalisation), Performance
 #             (dplyr group summarise), Readability (formal comments), UX (stable
 #             schema ordering).
@@ -18,21 +18,20 @@ report_regional_efficiency <- function(df) {                 # build report 1 su
   df %>%
     group_by(Region, MainIsland) %>%
     summarise(
-      TotalBudget = safe_sum(ApprovedBudgetForContract),
+      TotalApprovedBudget = safe_sum(ApprovedBudgetForContract),
       MedianSavings = safe_median(CostSavings),
       AvgDelay = safe_mean(CompletionDelayDays),
-      HighDelayPct = 100 * safe_mean(CompletionDelayDays > 30),
-      EfficiencyRaw = dplyr::if_else(
-        !is.na(MedianSavings) & !is.na(AvgDelay) & AvgDelay > 0,
-        (MedianSavings / AvgDelay) * 100,
-        NA_real_
-      ),
+      Delay30Rate = 100 * safe_mean(CompletionDelayDays > 30),
+      EfficiencyRaw = {
+        adj_delay <- dplyr::if_else(is.na(AvgDelay) | abs(AvgDelay) < 1e-6, NA_real_, AvgDelay)
+        ifelse(!is.na(MedianSavings) & !is.na(adj_delay), (MedianSavings / adj_delay) * 100, NA_real_)
+      },
       .groups = "drop"
     ) %>%
     mutate(
-      EfficiencyScore = pmax(0, pmin(100, minmax_0_100(EfficiencyRaw)))
+      EfficiencyScore = minmax_0_100(EfficiencyRaw)
     ) %>%
-    select(Region, MainIsland, TotalBudget, MedianSavings, AvgDelay, HighDelayPct, EfficiencyScore) %>%
+    select(Region, MainIsland, TotalApprovedBudget, MedianSavings, AvgDelay, Delay30Rate, EfficiencyScore) %>%
     arrange(desc(EfficiencyScore), Region, MainIsland)
 }
 
