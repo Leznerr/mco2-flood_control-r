@@ -58,13 +58,13 @@ test_that("tiny fixture end-to-end pipeline respects invariants", {
   expect_true(all(r1$EfficiencyScore >= 0 & r1$EfficiencyScore <= 100, na.rm = TRUE))
   expect_lte(nrow(r2), 15)
   expect_true(all(r3$FundingYear == sort(r3$FundingYear)))
-  expect_true(all(is.na(r3$YoY_vs_2021[r3$FundingYear == 2021])))
+  expect_true(all(is.na(r3$YoYChange[r3$FundingYear == 2021])))
 
   with_tempdir({
     outdir <- dir
-    f1 <- file.path(outdir, "report1_regional_efficiency.csv")
-    f2 <- file.path(outdir, "report2_top_contractors.csv")
-    f3 <- file.path(outdir, "report3_overruns_trend.csv")
+    f1 <- path_report1(outdir)
+    f2 <- path_report2(outdir)
+    f3 <- path_report3(outdir)
     fj <- file.path(outdir, "summary.json")
 
     write_report_csv(r1, f1)

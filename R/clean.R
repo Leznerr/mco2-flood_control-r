@@ -54,38 +54,27 @@ suppressPackageStartupMessages({                                           # sup
 
 # ---- Strict money parser (Php text -> numeric pesos) -------------------------
 .parse_money_safely <- function(x) {
-  # Coerce to character, trim, normalize common artifacts
-  chr <- as.character(x)
-  chr <- trimws(chr)
-
-  # Normalize currency prefixes and spacing (case-insensitive)
+  chr <- trimws(as.character(x))
   chr <- gsub("(?i)php\\s*", "", chr, perl = TRUE)
-  chr <- gsub("\\s+", " ", chr, perl = TRUE)
-
-  # Accept plain numbers with commas/decimals; ignore any trailing text
-  # parse_number handles commas, leading signs, decimals
-  num <- readr::parse_number(chr, na = c("", "NA", "N/A", "null", "NULL"),
-                             locale = readr::locale(grouping_mark = ",", decimal_mark = "."))
-
-  # Handle magnitude suffixes if any (rare): 1.2B, 500M
-  has_B <- grepl("(?i)[0-9]\\s*[A-Z]*B\\b", chr, perl = TRUE)
-  has_M <- grepl("(?i)[0-9]\\s*[A-Z]*M\\b", chr, perl = TRUE)
-  num[has_B] <- num[has_B] * 1e9
-  num[has_M] <- num[has_M] * 1e6
-
-  # Bound-check to catch garbage: anything > 1e12 pesos is treated as NA and logged
-  bad <- !is.na(num) & !is.finite(num)
-  too_big <- !is.na(num) & (abs(num) > 1e12)
-  if (any(bad | too_big)) {
-    n_bad <- sum(bad | too_big)
+  num <- readr::parse_number(
+    chr,
+    na = c("", "NA", "N/A", "null", "NULL"),
+    locale = readr::locale(grouping_mark = ",", decimal_mark = ".")
+  )
+  bx <- grepl("(?i)\\bB\\b", chr)
+  mx <- grepl("(?i)\\bM\\b", chr)
+  num[bx] <- num[bx] * 1e9
+  num[mx] <- num[mx] * 1e6
+  bad <- (!is.finite(num)) | (abs(num) > 1e12)
+  bad_idx <- which(bad %in% TRUE)
+  if (length(bad_idx) > 0L) {
     if (exists("log_warn", mode = "function")) {
-      log_warn("Money parse: %d implausible values coerced to NA (>|1e12| or non-finite).", n_bad)
+      log_warn("Money parse: %d implausible -> NA", length(bad_idx))
     } else {
-      message(sprintf("[WARN] Money parse: %d implausible values -> NA", n_bad))
+      message(sprintf("[WARN] Money parse: %d implausible -> NA", length(bad_idx)))
     }
-    num[bad | too_big] <- NA_real_
+    num[bad_idx] <- NA_real_
   }
-
   num
 }
 

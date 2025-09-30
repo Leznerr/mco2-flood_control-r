@@ -35,9 +35,9 @@ Rscript main.R --input dpwh_flood_control_projects.csv --outdir outputs
 
 Key outputs:
 
-- `report1_regional_efficiency.csv` – Regional Flood Mitigation Efficiency
-- `report2_top_contractors.csv` – Top Contractors Performance Ranking
-- `report3_overruns_trend.csv` – Annual Project Type Cost Overrun Trends
+- `report1_regional_summary.csv` – Regional Flood Mitigation Efficiency
+- `report2_contractor_ranking.csv` – Top Contractors Performance Ranking
+- `report3_annual_trends.csv` – Annual Project Type Cost Overrun Trends
 - `summary.json` – global scalar metrics
 
 ## Tests

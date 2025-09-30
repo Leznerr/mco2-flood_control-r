@@ -22,7 +22,9 @@ build_cli <- function() {                                    # construct OptionP
     make_option(c("-i", "--input"), type = "character", metavar = "FILE",
                 help = "Path to the DPWH flood-control CSV dataset."),
     make_option(c("-o", "--outdir"), type = "character", default = "outputs",
-                metavar = "DIR", help = "Directory where reports and summary will be written [default %default].")
+                metavar = "DIR", help = "Directory where reports and summary will be written [default %default]."),
+    make_option(c("--interactive"), action = "store_true", default = FALSE,
+                help = "Enable interactive console preview of reports before export.")
   )
   OptionParser(option_list = option_list, usage = "%prog --input <file> [--outdir <dir>]")
 }

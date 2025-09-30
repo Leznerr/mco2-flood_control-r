@@ -17,6 +17,12 @@ suppressPackageStartupMessages({                             # ensure clean cons
   library(jsonlite)
 })
 
+# ---- Canonical output paths ---------------------------------------------------
+path_report1 <- function(outdir) file.path(outdir, "report1_regional_summary.csv")
+path_report2 <- function(outdir) file.path(outdir, "report2_contractor_ranking.csv")
+path_report3 <- function(outdir) file.path(outdir, "report3_annual_trends.csv")
+path_summary <- function(outdir) file.path(outdir, "summary.json")
+
 # ---- readr write compatibility (pre-2.0 vs >=2.0) ----------------------------
 .readr_has_escape <- function() {
   tryCatch(utils::packageVersion("readr") >= "2.0.0", error = function(...) FALSE)
