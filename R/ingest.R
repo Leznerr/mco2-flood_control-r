@@ -37,6 +37,7 @@ ALLOW_BOM <- TRUE  # boolean; informational only (readr::read_csv strips BOM saf
   } else {                                                               # otherwise fallback to base message
     message(sprintf("[INFO]  %s", msg))                                  # print standardized info log
   }
+  invisible(NULL)
 }
 
 # Emit a warning message; integrates with project logger if present.
@@ -47,6 +48,7 @@ ALLOW_BOM <- TRUE  # boolean; informational only (readr::read_csv strips BOM saf
   } else {                                                               # otherwise fallback to base message
     message(sprintf("[WARN]  %s", msg))                                  # print standardized warn log
   }
+  invisible(NULL)
 }
 
 # ------------------------------- Public API -----------------------------------

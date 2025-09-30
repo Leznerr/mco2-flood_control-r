@@ -67,6 +67,7 @@ suppressPackageStartupMessages({                            # suppress package b
       NROW(df_raw),
       paste(utils::head(names(df_raw), 5), collapse = ",")
     )
+    stopifnot(is.data.frame(df_raw), nrow(df_raw) > 0)
   })
 
   with_log_context(list(stage = "validate"), {
