@@ -51,17 +51,10 @@ suppressPackageStartupMessages({                            # suppress package b
 .source_or_die("R/verify.R")                                 # verify_outputs()
 
 # --------------------------- Pipeline helper stages ---------------------------
-.pipeline_prepare <- function(args) {
-  rows_loaded <- 0L
-  rows_filtered <- 0L
-  raw <- NULL
-  cleaned <- NULL
-  derived <- NULL
-  filtered <- NULL
 
-  with_log_context(list(stage = "ingest"), {
-    raw <<- ingest_csv(args$input)
-    rows_loaded <<- nrow(raw)
+.pipeline_prepare <- function(args) {
+  ingest_result <- with_log_context(list(stage = "ingest"), {
+    raw <- ingest_csv(args$input)
     log_info(
       "diagnostic: class(raw)=%s; nrow=%s; names[1:5]=%s",
       paste(class(raw), collapse = "/"),
@@ -69,30 +62,34 @@ suppressPackageStartupMessages({                            # suppress package b
       paste(utils::head(names(raw), 5), collapse = ",")
     )
     stopifnot(is.data.frame(raw), nrow(raw) > 0)
+    list(data = raw, rows_loaded = nrow(raw))
   })
+
+  raw <- ingest_result$data
+  rows_loaded <- ingest_result$rows_loaded
 
   with_log_context(list(stage = "validate"), {
     validate_schema(raw)
   })
 
-  with_log_context(list(stage = "clean"), {
-    cleaned <<- clean_all(raw)
+  cleaned <- with_log_context(list(stage = "clean"), {
+    clean_all(raw)
   })
 
-  with_log_context(list(stage = "derive"), {
-    derived <<- derive_fields(cleaned)
+  derived <- with_log_context(list(stage = "derive"), {
+    derive_fields(cleaned)
   })
 
-  with_log_context(list(stage = "filter"), {
-    filtered <<- filter_years(derived, years = 2021:2023)
+  filter_result <- with_log_context(list(stage = "filter"), {
+    filtered <- filter_years(derived, years = 2021:2023)
     assert_year_filter(filtered, allowed_years = 2021:2023)
-    rows_filtered <<- nrow(filtered)
+    list(data = filtered, rows_filtered = nrow(filtered))
   })
 
   list(
-    data = filtered,
+    data = filter_result$data,
     rows_loaded = rows_loaded,
-    rows_filtered = rows_filtered
+    rows_filtered = filter_result$rows_filtered
   )
 }
 
@@ -100,22 +97,17 @@ suppressPackageStartupMessages({                            # suppress package b
   df <- prep$data
   if (is.null(df)) stop("pipeline_generate_outputs(): filtered dataset missing.")
 
-  r1 <- NULL
-  r2 <- NULL
-  r3 <- NULL
-  sumry <- NULL
-
-  with_log_context(list(stage = "report1"), {
-    r1 <<- report_regional_efficiency(df)
+  r1 <- with_log_context(list(stage = "report1"), {
+    report_regional_efficiency(df)
   })
-  with_log_context(list(stage = "report2"), {
-    r2 <<- report_contractor_ranking(df)
+  r2 <- with_log_context(list(stage = "report2"), {
+    report_contractor_ranking(df)
   })
-  with_log_context(list(stage = "report3"), {
-    r3 <<- report_overrun_trends(df)
+  r3 <- with_log_context(list(stage = "report3"), {
+    report_overrun_trends(df)
   })
-  with_log_context(list(stage = "summary"), {
-    sumry <<- build_summary(df)
+  sumry <- with_log_context(list(stage = "summary"), {
+    build_summary(df)
   })
 
   f1 <- path_report1(args$outdir)
