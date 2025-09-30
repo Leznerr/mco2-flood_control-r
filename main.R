@@ -6,9 +6,9 @@
 #              reports (R1,R2,R3) → summary → outputs, with structured logging.
 # Contract   : Run via:
 #                Rscript main.R --input dpwh_flood_control_projects.csv --outdir outputs
-# Outputs    : outputs/report1_regional_summary.csv
-#              outputs/report2_contractor_ranking.csv
-#              outputs/report3_annual_trends.csv
+# Outputs    : outputs/report1_regional_efficiency.csv
+#              outputs/report2_top_contractors.csv
+#              outputs/report3_overruns_trend.csv
 #              outputs/summary.json
 # Rubric     : Simplicity (clear stages), Correctness (fail-fast, assertions),
 #              Performance (vectorized steps), Readability (formal comments),
@@ -48,19 +48,13 @@ suppressPackageStartupMessages({                            # suppress package b
 .source_or_die("R/report2.R")                                # report_contractor_ranking()
 .source_or_die("R/report3.R")                                # report_overrun_trends()
 .source_or_die("R/summary.R")                                # build_summary()
+.source_or_die("R/verify.R")                                 # verify_outputs()
 
 # --------------------------- Pipeline helper stages ---------------------------
-.pipeline_prepare <- function(args) {
-  rows_loaded <- 0L
-  rows_filtered <- 0L
-  raw <- NULL
-  cleaned <- NULL
-  derived <- NULL
-  filtered <- NULL
 
-  with_log_context(list(stage = "ingest"), {
-    raw <<- ingest_csv(args$input)
-    rows_loaded <<- nrow(raw)
+.pipeline_prepare <- function(args) {
+  ingest_result <- with_log_context(list(stage = "ingest"), {
+    raw <- ingest_csv(args$input)
     log_info(
       "diagnostic: class(raw)=%s; nrow=%s; names[1:5]=%s",
       paste(class(raw), collapse = "/"),
@@ -68,30 +62,34 @@ suppressPackageStartupMessages({                            # suppress package b
       paste(utils::head(names(raw), 5), collapse = ",")
     )
     stopifnot(is.data.frame(raw), nrow(raw) > 0)
+    list(data = raw, rows_loaded = nrow(raw))
   })
+
+  raw <- ingest_result$data
+  rows_loaded <- ingest_result$rows_loaded
 
   with_log_context(list(stage = "validate"), {
     validate_schema(raw)
   })
 
-  with_log_context(list(stage = "clean"), {
-    cleaned <<- clean_all(raw)
+  cleaned <- with_log_context(list(stage = "clean"), {
+    clean_all(raw)
   })
 
-  with_log_context(list(stage = "derive"), {
-    derived <<- derive_fields(cleaned)
+  derived <- with_log_context(list(stage = "derive"), {
+    derive_fields(cleaned)
   })
 
-  with_log_context(list(stage = "filter"), {
-    filtered <<- filter_years(derived, years = 2021:2023)
+  filter_result <- with_log_context(list(stage = "filter"), {
+    filtered <- filter_years(derived, years = 2021:2023)
     assert_year_filter(filtered, allowed_years = 2021:2023)
-    rows_filtered <<- nrow(filtered)
+    list(data = filtered, rows_filtered = nrow(filtered))
   })
 
   list(
-    data = filtered,
+    data = filter_result$data,
     rows_loaded = rows_loaded,
-    rows_filtered = rows_filtered
+    rows_filtered = filter_result$rows_filtered
   )
 }
 
@@ -99,22 +97,17 @@ suppressPackageStartupMessages({                            # suppress package b
   df <- prep$data
   if (is.null(df)) stop("pipeline_generate_outputs(): filtered dataset missing.")
 
-  r1 <- NULL
-  r2 <- NULL
-  r3 <- NULL
-  sumry <- NULL
-
-  with_log_context(list(stage = "report1"), {
-    r1 <<- report_regional_efficiency(df)
+  r1 <- with_log_context(list(stage = "report1"), {
+    report_regional_efficiency(df)
   })
-  with_log_context(list(stage = "report2"), {
-    r2 <<- report_contractor_ranking(df)
+  r2 <- with_log_context(list(stage = "report2"), {
+    report_contractor_ranking(df)
   })
-  with_log_context(list(stage = "report3"), {
-    r3 <<- report_overrun_trends(df)
+  r3 <- with_log_context(list(stage = "report3"), {
+    report_overrun_trends(df)
   })
-  with_log_context(list(stage = "summary"), {
-    sumry <<- build_summary(df)
+  sumry <- with_log_context(list(stage = "summary"), {
+    build_summary(df)
   })
 
   f1 <- path_report1(args$outdir)
@@ -128,13 +121,45 @@ suppressPackageStartupMessages({                            # suppress package b
 
   with_log_context(list(stage = "output"), {
     ensure_outdir(args$outdir)
-    write_report_csv(r1_fmt, f1, exclude = fmt_opts$exclude, exclude_regex = fmt_opts$exclude_regex)
-    write_report_csv(r2_fmt, f2, exclude = fmt_opts$exclude, exclude_regex = fmt_opts$exclude_regex)
-    write_report_csv(r3_fmt, f3, exclude = fmt_opts$exclude, exclude_regex = fmt_opts$exclude_regex)
+    write_report_csv(
+      r1,
+      f1,
+      exclude = fmt_opts$exclude,
+      exclude_regex = fmt_opts$exclude_regex,
+      comma_strings = fmt_opts$comma_strings,
+      digits = fmt_opts$digits
+    )
+    write_report_csv(
+      r2,
+      f2,
+      exclude = fmt_opts$exclude,
+      exclude_regex = fmt_opts$exclude_regex,
+      comma_strings = fmt_opts$comma_strings,
+      digits = fmt_opts$digits
+    )
+    write_report_csv(
+      r3,
+      f3,
+      exclude = fmt_opts$exclude,
+      exclude_regex = fmt_opts$exclude_regex,
+      comma_strings = fmt_opts$comma_strings,
+      digits = fmt_opts$digits
+    )
     write_summary_json(sumry, fj)
   })
 
+  with_log_context(list(stage = "verification"), {
+    verify_outputs(
+      dataset = df,
+      reports = list(report1 = r1, report2 = r2, report3 = r3),
+      summary = sumry,
+      outdir = args$outdir,
+      fmt_opts = fmt_opts
+    )
+  })
+
   list(
+    raw = list(report1 = r1, report2 = r2, report3 = r3),
     formatted = list(report1 = r1_fmt, report2 = r2_fmt, report3 = r3_fmt),
     summary = sumry,
     paths = list(report1 = f1, report2 = f2, report3 = f3, summary = fj)
@@ -162,7 +187,9 @@ main <- function() {                                         # define primary or
   log_info("Output dir: %s", args$outdir)                    # log the resolved output directory
 
   fmt_opts <- list(
-    exclude = c("FundingYear", "Year", "N", "NProjects", "NumProjects", "Rank"),
+    exclude = c(
+      "FundingYear", "Year", "N", "NProjects", "NumProjects", "Rank", "TotalProjects"
+    ),
     comma_strings = TRUE,
     digits = 2,
     exclude_regex = NULL
@@ -172,20 +199,28 @@ main <- function() {                                         # define primary or
     prep <- .pipeline_prepare(args)
     .pipeline_generate_outputs(prep, args, fmt_opts)
   } else {
-    show_menu <- function() {
-      cat("Select Language Implementation:\n")
-      cat("[1] Load the file\n")
-      cat("[2] Generate Reports\n\n")
+    show_language_menu <- function() {
+      cat("Select language implementation:\n")
+      cat("[1] R\n\n")
     }
 
-    show_menu()
+    show_action_menu <- function() {
+      cat("Report Selection Menu:\n")
+      cat("[1] Load dataset\n")
+      cat("[2] Generate reports\n\n")
+    }
+
+    show_language_menu()
     invisible(readline("Enter choice: "))
+    show_action_menu()
+    invisible(readline("Enter choice: "))
+
     prep <- .pipeline_prepare(args)
     cat(sprintf("Processing dataset... (%d rows loaded, %d filtered for 2021–2023)\n",
                 prep$rows_loaded, prep$rows_filtered))
 
     cat("\n")
-    show_menu()
+    show_action_menu()
     invisible(readline("Enter choice: "))
     cat("\nGenerating reports...\n")
     results <- .pipeline_generate_outputs(prep, args, fmt_opts)
@@ -201,7 +236,7 @@ main <- function() {                                         # define primary or
       cat(sprintf("(Full table exported to %s)\n\n", basename(path)))
     }
 
-    preview("Report 1 — Regional Flood Mitigation Efficiency Summary", results$formatted$report1, results$paths$report1)
+    preview("Report 1 — Regional Flood Mitigation Efficiency", results$formatted$report1, results$paths$report1)
     preview("Report 2 — Top Contractors Performance Ranking", results$formatted$report2, results$paths$report2)
     preview("Report 3 — Annual Project Type Cost Overrun Trends", results$formatted$report3, results$paths$report3)
 

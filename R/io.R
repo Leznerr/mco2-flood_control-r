@@ -18,9 +18,9 @@ suppressPackageStartupMessages({                             # ensure clean cons
 })
 
 # ---- Canonical output paths ---------------------------------------------------
-path_report1 <- function(outdir) file.path(outdir, "report1_regional_summary.csv")
-path_report2 <- function(outdir) file.path(outdir, "report2_contractor_ranking.csv")
-path_report3 <- function(outdir) file.path(outdir, "report3_annual_trends.csv")
+path_report1 <- function(outdir) file.path(outdir, "report1_regional_efficiency.csv")
+path_report2 <- function(outdir) file.path(outdir, "report2_top_contractors.csv")
+path_report3 <- function(outdir) file.path(outdir, "report3_overruns_trend.csv")
 path_summary <- function(outdir) file.path(outdir, "summary.json")
 
 # ---- readr write compatibility (pre-2.0 vs >=2.0) ----------------------------
@@ -83,14 +83,25 @@ ensure_outdir <- function(path) {                            # create directory 
   invisible(path)
 }
 
-write_report_csv <- function(df, path, exclude = NULL, exclude_regex = NULL) {
+write_report_csv <- function(df,
+                             path,
+                             exclude = NULL,
+                             exclude_regex = NULL,
+                             comma_strings = TRUE,
+                             digits = 2) {
   if (!is.data.frame(df)) stop("write_report_csv(): 'df' must be a data frame.")
   if (missing(path) || !is.character(path) || length(path) != 1L || is.na(path)) {
     stop("write_report_csv(): 'path' must be a non-NA character scalar.")
   }
   dir <- dirname(path)
   if (!dir.exists(dir)) ensure_outdir(dir)
-  formatted <- format_dataframe(df, exclude = exclude, exclude_regex = exclude_regex)
+  formatted <- format_dataframe(
+    df,
+    exclude = exclude,
+    exclude_regex = exclude_regex,
+    comma_strings = comma_strings,
+    digits = digits
+  )
   tmp <- tempfile(pattern = paste0(basename(path), "."), tmpdir = dir)
   write_csv_compat(formatted, file = tmp, na = "", col_names = TRUE, delim = ",", progress = FALSE)
   .atomic_replace(tmp, path, "write_report_csv()")
