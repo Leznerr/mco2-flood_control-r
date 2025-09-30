@@ -17,6 +17,7 @@ suppressPackageStartupMessages({                             # quiet load
 .log_info <- function(fmt, ...) {                            # local logging shim (delegates when global logger exists)
   msg <- sprintf(fmt, ...)
   if (exists("log_info", mode = "function")) log_info("%s", msg) else message(sprintf("[INFO]  %s", msg))
+  invisible(NULL)
 }
 
 derive_fields <- function(df) {                              # append CostSavings + CompletionDelayDays
