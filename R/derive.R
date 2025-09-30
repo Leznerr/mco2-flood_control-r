@@ -25,7 +25,19 @@ derive_fields <- function(df) {                              # append CostSaving
   }
   df2 <- df %>%
     mutate(
-      CostSavings = ApprovedBudgetForContract - ContractCost,
+      CostSavings = {
+        cs <- ApprovedBudgetForContract - ContractCost
+        bad <- !is.finite(cs) | abs(cs) > 1e12
+        if (any(bad)) {
+          if (exists("log_warn", mode = "function")) {
+            log_warn("CostSavings: %d implausible values (>1e12 or non-finite) -> NA.", sum(bad))
+          } else {
+            message(sprintf("[WARN] CostSavings: %d implausible values (>1e12 or non-finite) -> NA.", sum(bad)))
+          }
+          cs[bad] <- NA_real_
+        }
+        cs
+      },
       CompletionDelayDays = as.numeric(ActualCompletionDate - StartDate)
     )
   overruns <- sum(df2$CostSavings < 0, na.rm = TRUE)

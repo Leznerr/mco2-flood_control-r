@@ -31,3 +31,14 @@ test_that("summary aggregates scalar metrics", {
   expect_equal(payload$total_savings, 250)
 })
 
+test_that("summary total_savings is finite or NA but never absurd", {
+  df <- tibble(
+    Contractor = rep("C", 1001),
+    Province = rep("P", 1001),
+    CompletionDelayDays = rep(NA_real_, 1001),
+    CostSavings = c(rep(1e6, 1000), 1e146)
+  )
+  payload <- build_summary(df)
+  expect_true(is.na(payload$total_savings) || abs(payload$total_savings) <= 1e13)
+})
+

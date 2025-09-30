@@ -52,8 +52,41 @@ suppressPackageStartupMessages({                                           # sup
   as.Date(dt)                                                             # coerce POSIXct -> Date (drops time component)
 }
 
-.parse_money_number <- function(x) {                                       # parse currency-like strings to numeric
-  readr::parse_number(x, locale = readr::locale(grouping_mark = ",", decimal_mark = ".")) # strip "Php", commas, keep decimals
+# ---- Strict money parser (Php text -> numeric pesos) -------------------------
+.parse_money_safely <- function(x) {
+  # Coerce to character, trim, normalize common artifacts
+  chr <- as.character(x)
+  chr <- trimws(chr)
+
+  # Normalize currency prefixes and spacing (case-insensitive)
+  chr <- gsub("(?i)php\\s*", "", chr, perl = TRUE)
+  chr <- gsub("\\s+", " ", chr, perl = TRUE)
+
+  # Accept plain numbers with commas/decimals; ignore any trailing text
+  # parse_number handles commas, leading signs, decimals
+  num <- readr::parse_number(chr, na = c("", "NA", "N/A", "null", "NULL"),
+                             locale = readr::locale(grouping_mark = ",", decimal_mark = "."))
+
+  # Handle magnitude suffixes if any (rare): 1.2B, 500M
+  has_B <- grepl("(?i)[0-9]\\s*[A-Z]*B\\b", chr, perl = TRUE)
+  has_M <- grepl("(?i)[0-9]\\s*[A-Z]*M\\b", chr, perl = TRUE)
+  num[has_B] <- num[has_B] * 1e9
+  num[has_M] <- num[has_M] * 1e6
+
+  # Bound-check to catch garbage: anything > 1e12 pesos is treated as NA and logged
+  bad <- !is.na(num) & !is.finite(num)
+  too_big <- !is.na(num) & (abs(num) > 1e12)
+  if (any(bad | too_big)) {
+    n_bad <- sum(bad | too_big)
+    if (exists("log_warn", mode = "function")) {
+      log_warn("Money parse: %d implausible values coerced to NA (>|1e12| or non-finite).", n_bad)
+    } else {
+      message(sprintf("[WARN] Money parse: %d implausible values -> NA", n_bad))
+    }
+    num[bad | too_big] <- NA_real_
+  }
+
+  num
 }
 
 # ---- Safe integer coercion that accepts numeric/character/factor -------------
@@ -138,8 +171,8 @@ clean_all <- function(df) {                                                # def
       ActualCompletionDate = .parse_date_any(ActualCompletionDate),         # parse ActualCompletionDate to Date
 
       # Money: parse currency-like strings and commas to numeric
-      ApprovedBudgetForContract = .parse_money_number(ApprovedBudgetForContract), # numeric ABC
-      ContractCost              = .parse_money_number(ContractCost),        # numeric contract cost
+      ApprovedBudgetForContract = .parse_money_safely(.data$ApprovedBudgetForContract), # numeric ABC via strict parser
+      ContractCost              = .parse_money_safely(.data$ContractCost),  # numeric contract cost
 
       # Year: integer FundingYear (handles "2021", 2021.0, "FY2021", etc.)
       FundingYear = .as_integer_safely(.data$FundingYear),                  # integer or NA if unparsable
@@ -154,7 +187,24 @@ clean_all <- function(df) {                                                # def
       Contractor = .title_case_squish(Contractor),                          # normalize Contractor naming
       TypeOfWork = .squish_only(TypeOfWork)                                 # preserve original case for TypeOfWork
     ) %>%
-    {                                                                       # begin inline block to apply bound checks
+    {
+      range_formatter <- function(v) {
+        if (all(is.na(v))) return(c("NA", "NA"))
+        min_v <- suppressWarnings(min(v, na.rm = TRUE))
+        max_v <- suppressWarnings(max(v, na.rm = TRUE))
+        min_str <- if (is.finite(min_v)) format(min_v, scientific = FALSE) else "NA"
+        max_str <- if (is.finite(max_v)) format(max_v, scientific = FALSE) else "NA"
+        c(min_str, max_str)
+      }
+      budget_range <- range_formatter(.$ApprovedBudgetForContract)
+      cost_range   <- range_formatter(.$ContractCost)
+      if (exists("log_info", mode = "function")) {
+        log_info("Money ranges | Budget: [%s, %s] | Cost: [%s, %s]",
+                 budget_range[1], budget_range[2], cost_range[1], cost_range[2])
+      } else {
+        message(sprintf("[INFO] Money ranges | Budget: [%s, %s] | Cost: [%s, %s]",
+                        budget_range[1], budget_range[2], cost_range[1], cost_range[2]))
+      }
       b <- .bound_latlon(.$Latitude, .$Longitude)                           # compute bounded lat/lon
       mutate(., Latitude = b$lat, Longitude = b$lon)                        # replace with bounded versions
     }
@@ -207,6 +257,19 @@ clean_all <- function(df) {                                                # def
   } else {
     message(sprintf("[INFO] NA reductions by column: %s",
                     paste(sprintf("%s=%+d", names(na_delta), na_delta), collapse = ", ")))
+  }
+
+  max_formatter <- function(v) {
+    if (all(is.na(v))) return("NA")
+    max_v <- suppressWarnings(max(abs(v), na.rm = TRUE))
+    if (is.finite(max_v)) format(max_v, scientific = FALSE) else "NA"
+  }
+  max_budget <- max_formatter(df2$ApprovedBudgetForContract)
+  max_cost   <- max_formatter(df2$ContractCost)
+  if (exists("log_info", mode = "function")) {
+    log_info("Max |Budget|=%s |Cost|=%s", max_budget, max_cost)
+  } else {
+    message(sprintf("[INFO] Max |Budget|=%s |Cost|=%s", max_budget, max_cost))
   }
 
   rm(list="..na_before", inherits = FALSE)

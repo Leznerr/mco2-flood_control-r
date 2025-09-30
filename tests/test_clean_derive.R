@@ -125,5 +125,20 @@ test_that("FundingYear coercion accepts numeric, character, and factor", {
   expect_identical(out_fac, as.integer(c(2023, 2021, NA)))
 })
 
+test_that("parse money handles Php, commas, M/B suffix, and clamps absurd values", {
+  source("R/clean.R")
+
+  x <- c("Php 1,234,567.89", "2,000,000", "500M", "1.2B", "9999999999999", "NA", "garbage")
+  y <- .parse_money_safely(x)
+
+  expect_equal(y[1], 1234567.89, tolerance = 1e-6)
+  expect_equal(y[2], 2000000)
+  expect_equal(y[3], 500e6)
+  expect_equal(y[4], 1.2e9)
+  expect_true(is.na(y[5]))
+  expect_true(is.na(y[6]))
+  expect_true(is.na(y[7]))
+})
+
 
 

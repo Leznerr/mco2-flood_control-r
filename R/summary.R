@@ -17,12 +17,36 @@ suppressPackageStartupMessages({                             # quiet load
 
 build_summary <- function(df) {                              # assemble scalar metrics for JSON
   if (!is.data.frame(df)) stop("build_summary(): 'df' must be a data frame.")
+  savings_vec <- as.numeric(df$CostSavings)
+  if (length(savings_vec) == 0L || all(is.na(savings_vec))) {
+    total_savings <- NA_real_
+  } else {
+    total_savings <- sum(savings_vec, na.rm = TRUE)
+  }
+
+  if (!is.na(total_savings) && !is.finite(total_savings)) {
+    if (exists("log_warn", mode = "function")) {
+      log_warn("Summary: total_savings non-finite -> NA (value=%g).", total_savings)
+    } else {
+      message(sprintf("[WARN] Summary: total_savings non-finite -> NA (value=%g).", total_savings))
+    }
+    total_savings <- NA_real_
+  }
+
+  if (is.finite(total_savings) && abs(total_savings) > 1e13) {
+    if (exists("log_warn", mode = "function")) {
+      log_warn("Summary: total_savings=%g seems implausible; setting to NA and continuing.", total_savings)
+    } else {
+      message(sprintf("[WARN] Summary: total_savings=%g seems implausible; setting to NA and continuing.", total_savings))
+    }
+    total_savings <- NA_real_
+  }
   list(
     total_projects = nrow(df),
     total_contractors = dplyr::n_distinct(df$Contractor, na.rm = TRUE),
     total_provinces = dplyr::n_distinct(df$Province, na.rm = TRUE),
     global_avg_delay = safe_mean(df$CompletionDelayDays),
-    total_savings = safe_sum(df$CostSavings)
+    total_savings = total_savings
   )
 }
 
