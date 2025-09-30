@@ -91,5 +91,24 @@ test_that("derive_fields allows negative delays and filter_years drops disallowe
   expect_silent(assert_year_filter(filtered, 2021:2023))
 })
 
+test_that("NA delta logging computes per-column integer deltas without error", {
+  raw <- data.frame(
+    Region = c("NCR", NA), MainIsland = c("Luzon", "Luzon"),
+    Province = c("Metro Manila", "Metro Manila"), FundingYear = c("2021", "2021"),
+    TypeOfWork = c("Dredging", "Dredging"),
+    StartDate = c("2021-01-01", NA), ActualCompletionDate = c("2021-01-10", "2021-01-20"),
+    ApprovedBudgetForContract = c("1,000,000", "2,000,000"),
+    ContractCost = c("900,000", "1,900,000"),
+    Contractor = c("ABC", "ABC"),
+    ProjectLatitude = c("14.6", NA), ProjectLongitude = c("121.0", NA),
+    check.names = FALSE
+  )
+  validate_schema(raw)
+  cols_track <- c("Region","MainIsland","Province","FundingYear","TypeOfWork","StartDate","ActualCompletionDate",
+                  "ApprovedBudgetForContract","ContractCost","Contractor","Latitude","Longitude")
+  out <- clean_all(raw)
+  expect_true(is.data.frame(out))
+})
+
 
 
