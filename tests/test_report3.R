@@ -23,11 +23,12 @@ test_that("report 3 applies baseline logic correctly", {
     CostSavings = c(100, 150, -50, 0, 10)
   )
   report <- report_overrun_trends(df)
+  expect_equal(colnames(report), c("FundingYear", "TypeOfWork", "TotalProjects", "AvgSavings", "OverrunRate", "YoYChange"))
   a_rows <- report[report$TypeOfWork == "Type A", ]
   b_rows <- report[report$TypeOfWork == "Type B", ]
-  expect_true(all(is.na(a_rows$YoY_vs_2021[a_rows$FundingYear == 2021])))
-  expect_true(is.na(b_rows$YoY_vs_2021[b_rows$FundingYear == 2022]))
-  expect_equal(report$FundingYear, sort(report$FundingYear))
+  expect_true(all(is.na(a_rows$YoYChange[a_rows$FundingYear == 2021])))
+  expect_true(is.na(b_rows$YoYChange[b_rows$FundingYear == 2022]))
+  expect_true(all(report$FundingYear == sort(report$FundingYear)))
 })
 
 test_that("report 3 survives all-NA savings groups", {
@@ -39,6 +40,5 @@ test_that("report 3 survives all-NA savings groups", {
   report <- report_overrun_trends(df)
   expect_true(all(is.na(report$AvgSavings)))
   expect_true(all(is.na(report$OverrunRate)))
-  expect_true(all(is.na(report$YoY_vs_2021)))
+  expect_true(all(is.na(report$YoYChange)))
 })
-

@@ -6,9 +6,9 @@
 #              reports (R1,R2,R3) → summary → outputs, with structured logging.
 # Contract   : Run via:
 #                Rscript main.R --input dpwh_flood_control_projects.csv --outdir outputs
-# Outputs    : outputs/report1_regional_efficiency.csv
-#              outputs/report2_top_contractors.csv
-#              outputs/report3_overruns_trend.csv
+# Outputs    : outputs/report1_regional_summary.csv
+#              outputs/report2_contractor_ranking.csv
+#              outputs/report3_annual_trends.csv
 #              outputs/summary.json
 # Rubric     : Simplicity (clear stages), Correctness (fail-fast, assertions),
 #              Performance (vectorized steps), Readability (formal comments),
@@ -58,6 +58,13 @@ main <- function() {                                         # define primary or
   args <- parse_args(cli)                                    # parse command-line arguments into a named list
   validate_cli_args(args)                                    # fail fast on missing/invalid flags
   args <- normalize_cli_paths(args)                          # best-effort path normalization (no FS touch)
+  interactive_mode <- isTRUE(args$interactive)
+
+  if (interactive_mode) {
+    cat("============================================================\n")
+    cat("MCO2 Flood-Control Pipeline — Interactive Preview\n")
+    cat("============================================================\n")
+  }
 
   # ---- Logging setup & banner -------------------------------------------------
   if (!is.na(Sys.getenv("LOG_LEVEL", unset = NA))) {         # if LOG_LEVEL env var is present
@@ -69,8 +76,12 @@ main <- function() {                                         # define primary or
   log_info("Output dir: %s", args$outdir)                    # log the resolved output directory
 
   # ---- Stage 1: Ingest --------------------------------------------------------
+  rows_loaded <- 0L
+  rows_filtered <- 0L
+
   with_log_context(list(stage = "ingest"), {                 # attach stage context for nested logs
     df_raw <- ingest_csv(args$input)                         # read raw CSV (no transforms; parse issues attached as attribute)
+    rows_loaded <<- nrow(df_raw)
   })
 
   # ---- Stage 2: Validate ------------------------------------------------------
@@ -92,7 +103,13 @@ main <- function() {                                         # define primary or
   with_log_context(list(stage = "filter"), {                 # stage context: filtering
     df <- filter_years(df_plus, years = 2021:2023)           # keep only rows in allowed FundingYear set
     assert_year_filter(df, allowed_years = 2021:2023)        # double-check invariant post-filter
+    rows_filtered <<- nrow(df)
   })
+
+  if (interactive_mode) {
+    cat(sprintf("Processing dataset… (%d rows loaded, %d filtered for 2021–2023)\n",
+                rows_loaded, rows_filtered))
+  }
 
   # ---- Stage 6: Reports -------------------------------------------------------
   with_log_context(list(stage = "report1"), {                # context: report 1
@@ -114,14 +131,39 @@ main <- function() {                                         # define primary or
   with_log_context(list(stage = "output"), {                 # context: output writing
     ensure_outdir(args$outdir)                               # create output directory if it does not exist
 
-    f1 <- file.path(args$outdir, "report1_regional_efficiency.csv")  # assemble Report 1 path
-    f2 <- file.path(args$outdir, "report2_top_contractors.csv")      # assemble Report 2 path
-    f3 <- file.path(args$outdir, "report3_overruns_trend.csv")       # assemble Report 3 path
-    fj <- file.path(args$outdir, "summary.json")                     # assemble summary JSON path
+    f1 <- path_report1(args$outdir)
+    f2 <- path_report2(args$outdir)
+    f3 <- path_report3(args$outdir)
+    fj <- path_summary(args$outdir)
 
-    write_report_csv(r1, f1)                                 # write Report 1 with standardized formatting
-    write_report_csv(r2, f2)                                 # write Report 2 with standardized formatting
-    write_report_csv(r3, f3)                                 # write Report 3 with standardized formatting
+    fmt_opts <- list(
+      exclude = c("FundingYear", "Year", "N", "NProjects", "NumProjects", "Rank"),
+      comma_strings = TRUE,
+      digits = 2
+    )
+
+    r1_fmt <- do.call(format_dataframe, c(list(r1), fmt_opts))
+    r2_fmt <- do.call(format_dataframe, c(list(r2), fmt_opts))
+    r3_fmt <- do.call(format_dataframe, c(list(r3), fmt_opts))
+
+    if (interactive_mode) {
+      preview <- function(title, df_fmt, path) {
+        cat(sprintf("\n%s\n", title))
+        if (nrow(df_fmt) == 0) {
+          cat("[No rows]\n")
+        } else {
+          print(utils::head(df_fmt, 2), row.names = FALSE)
+        }
+        cat(sprintf("(Full table exported to %s)\n", path))
+      }
+      preview("Report 1 — Regional Summary", r1_fmt, f1)
+      preview("Report 2 — Contractor Ranking", r2_fmt, f2)
+      preview("Report 3 — Annual Trends", r3_fmt, f3)
+    }
+
+    write_report_csv(r1_fmt, f1)
+    write_report_csv(r2_fmt, f2)
+    write_report_csv(r3_fmt, f3)
     write_summary_json(sumry, fj)                            # write summary JSON (pretty, auto_unbox)
   })
 

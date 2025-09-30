@@ -58,19 +58,27 @@ minmax_0_100 <- function(x) {                               # rescale numeric ve
   scaled * 100
 }
 
-format_dataframe <- function(df, exclude = NULL, exclude_regex = NULL) {
+format_dataframe <- function(df,
+                             exclude = NULL,
+                             exclude_regex = NULL,
+                             comma_strings = TRUE,
+                             digits = 2) {
   if (!is.data.frame(df)) stop("format_dataframe(): 'df' must be a data frame.")
   numeric_cols <- vapply(df, is.numeric, logical(1))
   if (!any(numeric_cols)) return(df)
-  default_exclude <- c("FundingYear", "Year", "N", "NProjects")
+  default_exclude <- c("FundingYear", "Year", "N", "NProjects", "NumProjects", "Rank")
   excl <- unique(c(default_exclude, exclude %||% character(0)))
   regex <- exclude_regex
   for (col in names(df)[numeric_cols]) {
     if (col %in% excl || (!is.null(regex) && grepl(regex, col))) {
       next
     }
-    values <- round(df[[col]], 2)
-    formatted <- formatC(values, format = "f", digits = 2, big.mark = ",", drop0trailing = FALSE)
+    values <- round(df[[col]], digits)
+    if (comma_strings) {
+      formatted <- formatC(values, format = "f", digits = digits, big.mark = ",", drop0trailing = FALSE)
+    } else {
+      formatted <- formatC(values, format = "f", digits = digits, drop0trailing = FALSE)
+    }
     formatted[is.na(values)] <- ""                               # keep NA as empty string for CSV readability
     df[[col]] <- formatted
   }
