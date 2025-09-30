@@ -17,6 +17,30 @@ suppressPackageStartupMessages({                             # ensure clean cons
   library(jsonlite)
 })
 
+# ---- readr write compatibility (pre-2.0 vs >=2.0) ----------------------------
+.readr_has_escape <- function() {
+  tryCatch(utils::packageVersion("readr") >= "2.0.0", error = function(...) FALSE)
+}
+
+write_csv_compat <- function(x, file, na = "", col_names = TRUE, delim = ",", progress = FALSE) {
+  # Use write_delim for both to control 'escape'/'quote_escape' explicitly
+  if (.readr_has_escape()) {
+    # readr >= 2.0.0: use 'escape'
+    readr::write_delim(
+      x, file = file, delim = delim, na = na,
+      col_names = col_names, progress = progress,
+      escape = "double"
+    )
+  } else {
+    # readr < 2.0.0: use 'quote_escape'
+    readr::write_delim(
+      x, file = file, delim = delim, na = na,
+      col_names = col_names, progress = progress,
+      quote_escape = "double"
+    )
+  }
+}
+
 .atomic_replace <- function(tmp, path, label) {              # helper to replace destination atomically with rollback
   if (!file.exists(tmp)) {
     stop(sprintf("%s: temporary file '%s' is missing before atomic replace.", label, tmp))
@@ -62,7 +86,7 @@ write_report_csv <- function(df, path, exclude = NULL, exclude_regex = NULL) {
   if (!dir.exists(dir)) ensure_outdir(dir)
   formatted <- format_dataframe(df, exclude = exclude, exclude_regex = exclude_regex)
   tmp <- tempfile(pattern = paste0(basename(path), "."), tmpdir = dir)
-  readr::write_csv(formatted, tmp, na = "", quote_escape = "double")
+  write_csv_compat(formatted, file = tmp, na = "", col_names = TRUE, delim = ",", progress = FALSE)
   .atomic_replace(tmp, path, "write_report_csv()")
 }
 
