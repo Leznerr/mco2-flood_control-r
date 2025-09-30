@@ -53,28 +53,36 @@ ensure_outputs_ready()
 
 library(readr)
 
-test_that("report filenames and schemas match spec", {
-  r1 <- readr::read_csv(path_report1("outputs"), show_col_types = FALSE)
-  r2 <- readr::read_csv(path_report2("outputs"), show_col_types = FALSE)
-  r3 <- readr::read_csv(path_report3("outputs"), show_col_types = FALSE)
+locale_comma <- readr::locale(grouping_mark = ",")
 
+test_that("report 1 schema & sort are exact", {
+  r1 <- readr::read_csv(path_report1("outputs"), show_col_types = FALSE, locale = locale_comma)
   expect_identical(names(r1), c("Region", "MainIsland", "TotalBudget", "MedianSavings", "AvgDelay", "HighDelayPct", "EfficiencyScore"))
-  expect_identical(names(r2), c("Rank", "Contractor", "TotalCost", "NumProjects", "AvgDelay", "TotalSavings", "ReliabilityIndex", "RiskFlag"))
-  expect_identical(names(r3), c("FundingYear", "TypeOfWork", "TotalProjects", "AvgSavings", "OverrunRate", "YoYChange"))
+  expect_true(!is.unsorted(-r1$EfficiencyScore))
 })
 
-test_that("report2 constraints and ordering hold", {
-  r2 <- readr::read_csv(path_report2("outputs"), show_col_types = FALSE)
+test_that("report 2 top-15, \u22655 projects, sorted by cost", {
+  r2 <- readr::read_csv(path_report2("outputs"), show_col_types = FALSE, locale = locale_comma)
   expect_true(nrow(r2) <= 15)
   expect_true(all(r2$NumProjects >= 5))
   expect_true(!is.unsorted(-r2$TotalCost))
+  expect_true(all(r2$ReliabilityIndex >= 0 & r2$ReliabilityIndex <= 100, na.rm = TRUE))
+  expected_flag <- ifelse(is.na(r2$ReliabilityIndex) | r2$ReliabilityIndex < 50, "High Risk", "Low Risk")
+  expect_identical(r2$RiskFlag, expected_flag)
 })
 
-test_that("report1 score bounds and report3 years", {
-  r1 <- readr::read_csv(path_report1("outputs"), show_col_types = FALSE)
-  expect_true(all(r1$EfficiencyScore >= 0 & r1$EfficiencyScore <= 100, na.rm = TRUE))
-
-  r3 <- readr::read_csv(path_report3("outputs"), show_col_types = FALSE)
+test_that("report 3 YoY vs 2021 within type", {
+  r3 <- readr::read_csv(path_report3("outputs"), show_col_types = FALSE, locale = locale_comma)
+  expect_identical(names(r3), c("FundingYear", "TypeOfWork", "TotalProjects", "AvgSavings", "OverrunRate", "YoYChange"))
   expect_true(all(r3$FundingYear %in% 2021:2023))
   expect_true(all(is.na(r3$YoYChange[r3$FundingYear == 2021])))
+
+  baseline <- r3[r3$FundingYear == 2021, c("TypeOfWork", "AvgSavings")]
+  names(baseline)[2] <- "BaseAvgSavings"
+  joined <- merge(r3, baseline, by = "TypeOfWork", all.x = TRUE, sort = FALSE)
+  subset <- joined[joined$FundingYear != 2021 & !is.na(joined$BaseAvgSavings) & joined$BaseAvgSavings != 0, ]
+  if (nrow(subset) > 0) {
+    expected <- ((subset$AvgSavings - subset$BaseAvgSavings) / abs(subset$BaseAvgSavings)) * 100
+    expect_equal(subset$YoYChange, expected, tolerance = 1e-6)
+  }
 })

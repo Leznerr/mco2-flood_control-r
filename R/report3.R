@@ -30,9 +30,9 @@ report_overrun_trends <- function(df) {                      # build report 3 ti
       YoYChange = dplyr::if_else(
         FundingYear == 2021 | is.na(Base2021) | Base2021 == 0,
         NA_real_,
-        100 * (AvgSavings - Base2021) / abs(Base2021)
+        ((AvgSavings - Base2021) / abs(Base2021)) * 100
       )
     ) %>%
     select(FundingYear, TypeOfWork, TotalProjects, AvgSavings, OverrunRate, YoYChange) %>%
-    arrange(FundingYear, desc(AvgSavings))
+    arrange(FundingYear, desc(AvgSavings), TypeOfWork)
 }

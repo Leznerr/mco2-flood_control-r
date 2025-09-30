@@ -34,8 +34,21 @@ validate_cli_args <- function(args) {                         # ensure CLI argum
   if (is.null(args$input) || is.na(args$input) || !nzchar(args$input)) {
     stop("CLI: --input <file> is required.")
   }
+  if (!file.exists(args$input)) {
+    stop(sprintf("CLI: input file not found -> %s", args$input))
+  }
   if (!is.null(args$outdir) && (is.na(args$outdir) || !nzchar(args$outdir))) {
     stop("CLI: --outdir must be a non-empty string when provided.")
+  }
+  outdir <- args$outdir %||% "outputs"
+  if (file.exists(outdir) && !dir.exists(outdir)) {
+    stop(sprintf("CLI: --outdir path exists but is not a directory -> %s", outdir))
+  }
+  if (!dir.exists(outdir)) {
+    ok <- dir.create(outdir, recursive = TRUE, showWarnings = FALSE)
+    if (!ok) {
+      stop(sprintf("CLI: unable to create --outdir '%s' (permissions?).", outdir))
+    }
   }
   invisible(args)
 }
