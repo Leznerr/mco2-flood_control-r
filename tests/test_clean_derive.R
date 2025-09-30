@@ -110,5 +110,20 @@ test_that("NA delta logging computes per-column integer deltas without error", {
   expect_true(is.data.frame(out))
 })
 
+test_that("FundingYear coercion accepts numeric, character, and factor", {
+  source("R/clean.R")  # ensure helper is visible in test
+  raw_num <- data.frame(FundingYear = c(2021, 2022, NA_real_), check.names = FALSE)
+  raw_chr <- data.frame(FundingYear = c("2021", " 2022 ", "NA"), check.names = FALSE)
+  raw_fac <- data.frame(FundingYear = factor(c("2023","2021",NA)), check.names = FALSE)
+
+  out_num <- .as_integer_safely(raw_num$FundingYear)
+  out_chr <- .as_integer_safely(raw_chr$FundingYear)
+  out_fac <- .as_integer_safely(raw_fac$FundingYear)
+
+  expect_identical(out_num, as.integer(c(2021, 2022, NA)))
+  expect_identical(out_chr, as.integer(c(2021, 2022, NA)))
+  expect_identical(out_fac, as.integer(c(2023, 2021, NA)))
+})
+
 
 

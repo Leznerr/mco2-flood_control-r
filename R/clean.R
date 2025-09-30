@@ -56,8 +56,19 @@ suppressPackageStartupMessages({                                           # sup
   readr::parse_number(x, locale = readr::locale(grouping_mark = ",", decimal_mark = ".")) # strip "Php", commas, keep decimals
 }
 
-.as_integer_safely <- function(x) {                                        # coerce to integer safely via digit parse
-  suppressWarnings(as.integer(readr::parse_number(x)))                    # parse digits then cast; non-numeric -> NA
+# ---- Safe integer coercion that accepts numeric/character/factor -------------
+.as_integer_safely <- function(x) {
+  if (is.integer(x)) return(x)
+  if (is.numeric(x)) {
+    x[!is.finite(x)] <- NA_real_
+    return(as.integer(round(x)))
+  }
+  if (is.factor(x)) return(.as_integer_safely(as.character(x)))
+  x_chr <- as.character(x)
+  x_chr <- trimws(x_chr)
+  na_tokens <- c("", "NA", "N/A", "null", "NULL")
+  x_chr[x_chr %in% na_tokens] <- NA_character_
+  readr::parse_integer(x_chr, na = na_tokens, trim_ws = TRUE, locale = readr::locale())
 }
 
 .as_numeric_safely <- function(x) {                                        # coerce to numeric, keep NA on failure
@@ -131,7 +142,7 @@ clean_all <- function(df) {                                                # def
       ContractCost              = .parse_money_number(ContractCost),        # numeric contract cost
 
       # Year: integer FundingYear (handles "2021", 2021.0, "FY2021", etc.)
-      FundingYear = .as_integer_safely(FundingYear),                        # integer or NA if unparsable
+      FundingYear = .as_integer_safely(.data$FundingYear),                  # integer or NA if unparsable
 
       # Geo: numeric lat/lon first (NA on non-numeric), then plausibility bounds
       Latitude  = .as_numeric_safely(Latitude),                             # numeric latitude or NA
