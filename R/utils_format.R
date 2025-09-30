@@ -66,7 +66,9 @@ format_dataframe <- function(df,
   if (!is.data.frame(df)) stop("format_dataframe(): 'df' must be a data frame.")
   numeric_cols <- vapply(df, is.numeric, logical(1))
   if (!any(numeric_cols)) return(df)
-  default_exclude <- c("FundingYear", "Year", "N", "NProjects", "NumProjects", "Rank")
+  default_exclude <- c(
+    "FundingYear", "Year", "N", "NProjects", "NumProjects", "Rank", "TotalProjects"
+  )
   excl <- unique(c(default_exclude, exclude %||% character(0)))
   regex <- exclude_regex
   for (col in names(df)[numeric_cols]) {
