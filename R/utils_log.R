@@ -67,7 +67,7 @@
   if (!is.null(.log_state$file)) {                          # also persist to file when configured
     cat(line, "\n", file = .log_state$file, append = TRUE)
   }
-  invisible(NULL)
+  return(invisible(NULL))
 }
 
 # Format the payload using printf-like semantics (handles zero-argument case).
@@ -130,28 +130,28 @@ log_debug <- function(fmt, ...) {                           # emit DEBUG-level m
   if (.should_emit("DEBUG")) {
     .emit_line("DEBUG", .format_message(fmt, ...))
   }
-  invisible(NULL)
+  return(invisible(NULL))
 }
 
 log_info <- function(fmt, ...) {                            # emit INFO-level message if allowed
   if (.should_emit("INFO")) {
     .emit_line("INFO", .format_message(fmt, ...))
   }
-  invisible(NULL)
+  return(invisible(NULL))
 }
 
 log_warn <- function(fmt, ...) {                            # emit WARN-level message if allowed
   if (.should_emit("WARN")) {
     .emit_line("WARN", .format_message(fmt, ...))
   }
-  invisible(NULL)
+  return(invisible(NULL))
 }
 
 log_error <- function(fmt, ...) {                           # emit ERROR-level message (always shown when allowed)
   if (.should_emit("ERROR")) {
     .emit_line("ERROR", .format_message(fmt, ...))
   }
-  invisible(NULL)
+  return(invisible(NULL))
 }
 
 log_banner <- function(text) {                              # convenience helper to emit run delimiter banner
@@ -159,6 +159,6 @@ log_banner <- function(text) {                              # convenience helper
   log_info(bar)
   log_info("%s", text)
   log_info(bar)
-  invisible(NULL)
+  return(invisible(NULL))
 }
 

@@ -30,14 +30,14 @@ suppressPackageStartupMessages({                                           # sup
   msg <- sprintf(fmt, ...)                                                 # format message once
   if (exists("log_info", mode = "function")) log_info("%s", msg)            # delegate to project logger if available
   else message(sprintf("[INFO]  %s", msg))                                 # otherwise print standardized INFO line
-  invisible(NULL)
+  return(invisible(NULL))
 }
 
 .log_warn <- function(fmt, ...) {                                          # define warning logger (printf-style)
   msg <- sprintf(fmt, ...)                                                 # format message once
   if (exists("log_warn", mode = "function")) log_warn("%s", msg)            # delegate to project logger if available
   else message(sprintf("[WARN]  %s", msg))                                 # otherwise print standardized WARN line
-  invisible(NULL)
+  return(invisible(NULL))
 }
 
 # ----------------------------- Helper functions -------------------------------

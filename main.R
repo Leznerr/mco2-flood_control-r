@@ -53,43 +53,43 @@ suppressPackageStartupMessages({                            # suppress package b
 .pipeline_prepare <- function(args) {
   rows_loaded <- 0L
   rows_filtered <- 0L
-  df_raw <- NULL
-  df_clean <- NULL
-  df_plus <- NULL
-  df_filtered <- NULL
+  raw <- NULL
+  cleaned <- NULL
+  derived <- NULL
+  filtered <- NULL
 
   with_log_context(list(stage = "ingest"), {
-    df_raw <<- ingest_csv(args$input)
-    rows_loaded <<- nrow(df_raw)
+    raw <<- ingest_csv(args$input)
+    rows_loaded <<- nrow(raw)
     log_info(
       "diagnostic: class(raw)=%s; nrow=%s; names[1:5]=%s",
-      paste(class(df_raw), collapse = "/"),
-      NROW(df_raw),
-      paste(utils::head(names(df_raw), 5), collapse = ",")
+      paste(class(raw), collapse = "/"),
+      NROW(raw),
+      paste(utils::head(names(raw), 5), collapse = ",")
     )
-    stopifnot(is.data.frame(df_raw), nrow(df_raw) > 0)
+    stopifnot(is.data.frame(raw), nrow(raw) > 0)
   })
 
   with_log_context(list(stage = "validate"), {
-    validate_schema(df_raw)
+    validate_schema(raw)
   })
 
   with_log_context(list(stage = "clean"), {
-    df_clean <<- clean_all(df_raw)
+    cleaned <<- clean_all(raw)
   })
 
   with_log_context(list(stage = "derive"), {
-    df_plus <<- derive_fields(df_clean)
+    derived <<- derive_fields(cleaned)
   })
 
   with_log_context(list(stage = "filter"), {
-    df_filtered <<- filter_years(df_plus, years = 2021:2023)
-    assert_year_filter(df_filtered, allowed_years = 2021:2023)
-    rows_filtered <<- nrow(df_filtered)
+    filtered <<- filter_years(derived, years = 2021:2023)
+    assert_year_filter(filtered, allowed_years = 2021:2023)
+    rows_filtered <<- nrow(filtered)
   })
 
   list(
-    data = df_filtered,
+    data = filtered,
     rows_loaded = rows_loaded,
     rows_filtered = rows_filtered
   )
