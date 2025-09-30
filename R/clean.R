@@ -87,17 +87,13 @@ suppressPackageStartupMessages({                                           # sup
 #'         conservative province-mean geolocation imputation.
 clean_all <- function(df) {                                                # define main cleaning function
   # ---- Preconditions ----------------------------------------------------------
-
-    StartDate = sum(is.na(df[["StartDate"]])),                             # NA count in StartDate
-    ActualCompletionDate = sum(is.na(df[["ActualCompletionDate"]])),       # NA count in ActualCompletionDate
-    ABC = sum(is.na(df[["ApprovedBudgetForContract"]])),                   # NA count in ApprovedBudgetForContract
-    Cost = sum(is.na(df[["ContractCost"]])),                               # NA count in ContractCost
-    FY  = sum(is.na(df[["FundingYear"]])),                                 # NA count in FundingYear
-    Lat = sum(is.na(df[["Latitude"]])),                                    # NA count in Latitude
-    Lon = sum(is.na(df[["Longitude"]]))                                    # NA count in Longitude
-  )
+  if (missing(df) || !is.data.frame(df)) {                                  # basic contract validation
+    stop("clean_all(): 'df' must be a data.frame/tibble.")                  # fail fast on incorrect inputs
+  }
 
   # ---- Canonicalize coordinate column names (accept synonyms) ----------------
+  # Keep this block ahead of type coercions so downstream NA tracking sees the
+  # canonical Latitude/Longitude headers regardless of input synonyms.
   # If Latitude/Longitude are absent but ProjectLatitude/ProjectLongitude exist,
   # rename the latter to the canonical names so all downstream steps use one pair.
   if (!('Latitude' %in% names(df)) && all(c('ProjectLatitude','ProjectLongitude') %in% names(df))) {
@@ -110,6 +106,18 @@ clean_all <- function(df) {                                                # def
       names(df)[match('ProjectLongitude', names(df))] <- 'Longitude'
     }
   }
+
+  orig_cols <- names(df)                                                    # capture canonicalized column order for restoration
+
+  ..na_before <- vapply(                                                    # snapshot NA counts before cleaning
+    c(
+      "Region","MainIsland","Province","FundingYear","TypeOfWork",
+      "StartDate","ActualCompletionDate","ApprovedBudgetForContract",
+      "ContractCost","Contractor","Latitude","Longitude"
+    ),
+    function(n) sum(is.na(df[[n]])),
+    integer(1)
+  )
 
   # ---- Type coercions & text normalization (idempotent) ----------------------
   df1 <- df %>%                                                            # start a new pipeline to avoid surprise mutation
@@ -168,42 +176,29 @@ clean_all <- function(df) {                                                # def
     ) %>%
     select(-mean_lat, -mean_lon, -.both_na)                                 # drop helper columns to restore schema
 
-  # ---- NA snapshot AFTER cleaning (for transparency) -------------------------
-  na_after <- list(                                                        # compute NA counts after cleaning/imputation
-    StartDate = sum(is.na(df2[["StartDate"]])),                             # post-clean NA count: StartDate
-    ActualCompletionDate = sum(is.na(df2[["ActualCompletionDate"]])),       # post-clean NA count: ActualCompletionDate
-    ABC = sum(is.na(df2[["ApprovedBudgetForContract"]])),                   # post-clean NA count: ABC
-    Cost = sum(is.na(df2[["ContractCost"]])),                               # post-clean NA count: Cost
-    FY  = sum(is.na(df2[["FundingYear"]])),                                 # post-clean NA count: FundingYear
-    Lat = sum(is.na(df2[["Latitude"]])),                                    # post-clean NA count: Latitude
-    Lon = sum(is.na(df2[["Longitude"]]))                                    # post-clean NA count: Longitude
+  # ---- NA reduction logging (compact; robust; comma-free) ----------------------
+  cols_track <- c(
+    "Region","MainIsland","Province","FundingYear","TypeOfWork",
+    "StartDate","ActualCompletionDate","ApprovedBudgetForContract",
+    "ContractCost","Contractor","Latitude","Longitude"
   )
 
-  # ---- Delta computation and concise log summary -----------------------------
-  delta <- list(                                                           # compute how many NAs were resolved
-    StartDate_fixed = na_before$StartDate - na_after$StartDate,             # resolved StartDate NAs
-    ACD_fixed       = na_before$ActualCompletionDate - na_after$ActualCompletionDate, # resolved completion-date NAs
-    ABC_fixed       = na_before$ABC - na_after$ABC,                         # resolved ABC NAs
-    Cost_fixed      = na_before$Cost - na_after$Cost,                       # resolved cost NAs
-    FY_fixed        = na_before$FY - na_after$FY,                           # resolved year NAs
-    Lat_fixed       = na_before$Lat - na_after$Lat,                         # resolved latitude NAs (parse or impute)
-    Lon_fixed       = na_before$Lon - na_after$Lon                          # resolved longitude NAs (parse or impute)
-  )
+  if (!exists("..na_before", inherits = FALSE)) {
+    ..na_before <- vapply(cols_track, function(n) sum(is.na(df[[n]])), integer(1))
+  }
 
-  .log_info(                                                                # emit one-line structured cleaning summary
-    paste(
-      "Cleaning summary |",
-      "dates_fixed(Start,Comp)=%d/%d |",
-      "money_fixed(ABC,Cost)=%d/%d |",
-      "year_fixed=%d |",
-      "geo_fixed(Lat,Lon)=%d/%d",
-      sep = " "
-    ),
-    delta$StartDate_fixed, delta$ACD_fixed,                                 # values for dates fixed
-    delta$ABC_fixed, delta$Cost_fixed,                                      # values for money fields fixed
-    delta$FY_fixed,                                                         # values for year fixed
-    delta$Lat_fixed, delta$Lon_fixed                                        # values for geo fixed
-  )
+  na_after <- vapply(cols_track, function(n) sum(is.na(df2[[n]])), integer(1))
+  na_delta <- ..na_before - na_after
+
+  if (exists("log_info", mode = "function")) {
+    log_info("NA reductions by column: %s",
+             paste(sprintf("%s=%+d", names(na_delta), na_delta), collapse = ", "))
+  } else {
+    message(sprintf("[INFO] NA reductions by column: %s",
+                    paste(sprintf("%s=%+d", names(na_delta), na_delta), collapse = ", ")))
+  }
+
+  rm(list="..na_before", inherits = FALSE)
 
   # ---- Postconditions: column integrity (order and set) ----------------------
   if (!identical(names(df2), orig_cols)) {                                  # ensure we didn't change names/order inadvertently
