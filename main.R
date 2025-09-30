@@ -49,6 +49,91 @@ suppressPackageStartupMessages({                            # suppress package b
 .source_or_die("R/report3.R")                                # report_overrun_trends()
 .source_or_die("R/summary.R")                                # build_summary()
 
+# --------------------------- Pipeline helper stages ---------------------------
+.pipeline_prepare <- function(args) {
+  rows_loaded <- 0L
+  rows_filtered <- 0L
+  df_raw <- NULL
+  df_clean <- NULL
+  df_plus <- NULL
+  df_filtered <- NULL
+
+  with_log_context(list(stage = "ingest"), {
+    df_raw <<- ingest_csv(args$input)
+    rows_loaded <<- nrow(df_raw)
+  })
+
+  with_log_context(list(stage = "validate"), {
+    validate_schema(df_raw)
+  })
+
+  with_log_context(list(stage = "clean"), {
+    df_clean <<- clean_all(df_raw)
+  })
+
+  with_log_context(list(stage = "derive"), {
+    df_plus <<- derive_fields(df_clean)
+  })
+
+  with_log_context(list(stage = "filter"), {
+    df_filtered <<- filter_years(df_plus, years = 2021:2023)
+    assert_year_filter(df_filtered, allowed_years = 2021:2023)
+    rows_filtered <<- nrow(df_filtered)
+  })
+
+  list(
+    data = df_filtered,
+    rows_loaded = rows_loaded,
+    rows_filtered = rows_filtered
+  )
+}
+
+.pipeline_generate_outputs <- function(prep, args, fmt_opts) {
+  df <- prep$data
+  if (is.null(df)) stop("pipeline_generate_outputs(): filtered dataset missing.")
+
+  r1 <- NULL
+  r2 <- NULL
+  r3 <- NULL
+  sumry <- NULL
+
+  with_log_context(list(stage = "report1"), {
+    r1 <<- report_regional_efficiency(df)
+  })
+  with_log_context(list(stage = "report2"), {
+    r2 <<- report_contractor_ranking(df)
+  })
+  with_log_context(list(stage = "report3"), {
+    r3 <<- report_overrun_trends(df)
+  })
+  with_log_context(list(stage = "summary"), {
+    sumry <<- build_summary(df)
+  })
+
+  f1 <- path_report1(args$outdir)
+  f2 <- path_report2(args$outdir)
+  f3 <- path_report3(args$outdir)
+  fj <- path_summary(args$outdir)
+
+  r1_fmt <- do.call(format_dataframe, c(list(r1), fmt_opts))
+  r2_fmt <- do.call(format_dataframe, c(list(r2), fmt_opts))
+  r3_fmt <- do.call(format_dataframe, c(list(r3), fmt_opts))
+
+  with_log_context(list(stage = "output"), {
+    ensure_outdir(args$outdir)
+    write_report_csv(r1_fmt, f1, exclude = fmt_opts$exclude, exclude_regex = fmt_opts$exclude_regex)
+    write_report_csv(r2_fmt, f2, exclude = fmt_opts$exclude, exclude_regex = fmt_opts$exclude_regex)
+    write_report_csv(r3_fmt, f3, exclude = fmt_opts$exclude, exclude_regex = fmt_opts$exclude_regex)
+    write_summary_json(sumry, fj)
+  })
+
+  list(
+    formatted = list(report1 = r1_fmt, report2 = r2_fmt, report3 = r3_fmt),
+    summary = sumry,
+    paths = list(report1 = f1, report2 = f2, report3 = f3, summary = fj)
+  )
+}
+
 # ------------------------------- Main routine ---------------------------------
 main <- function() {                                         # define primary orchestration function
   start_time <- Sys.time()                                   # capture start timestamp for duration logging
@@ -60,12 +145,6 @@ main <- function() {                                         # define primary or
   args <- normalize_cli_paths(args)                          # best-effort path normalization (no FS touch)
   interactive_mode <- isTRUE(args$interactive)
 
-  if (interactive_mode) {
-    cat("============================================================\n")
-    cat("MCO2 Flood-Control Pipeline — Interactive Preview\n")
-    cat("============================================================\n")
-  }
-
   # ---- Logging setup & banner -------------------------------------------------
   if (!is.na(Sys.getenv("LOG_LEVEL", unset = NA))) {         # if LOG_LEVEL env var is present
     log_set_level(Sys.getenv("LOG_LEVEL"))                   # set logger verbosity accordingly (DEBUG/INFO/WARN/ERROR)
@@ -75,97 +154,54 @@ main <- function() {                                         # define primary or
   log_info("Input CSV : %s", args$input)                     # log the resolved input path
   log_info("Output dir: %s", args$outdir)                    # log the resolved output directory
 
-  # ---- Stage 1: Ingest --------------------------------------------------------
-  rows_loaded <- 0L
-  rows_filtered <- 0L
+  fmt_opts <- list(
+    exclude = c("FundingYear", "Year", "N", "NProjects", "NumProjects", "Rank"),
+    comma_strings = TRUE,
+    digits = 2,
+    exclude_regex = NULL
+  )
 
-  with_log_context(list(stage = "ingest"), {                 # attach stage context for nested logs
-    df_raw <- ingest_csv(args$input)                         # read raw CSV (no transforms; parse issues attached as attribute)
-    rows_loaded <<- nrow(df_raw)
-  })
-
-  # ---- Stage 2: Validate ------------------------------------------------------
-  with_log_context(list(stage = "validate"), {               # update context to validation stage
-    validate_schema(df_raw)                                  # enforce required columns, non-empty shape, unique headers
-  })
-
-  # ---- Stage 3: Clean ---------------------------------------------------------
-  with_log_context(list(stage = "clean"), {                  # update context to cleaning stage
-    df_clean <- clean_all(df_raw)                            # parse dates/numerics, normalize text, conservative geo impute
-  })
-
-  # ---- Stage 4: Derive --------------------------------------------------------
-  with_log_context(list(stage = "derive"), {                 # update context to derivation stage
-    df_plus <- derive_fields(df_clean)                       # add CostSavings and CompletionDelayDays
-  })
-
-  # ---- Stage 5: Filter (2021–2023) + assert ----------------------------------
-  with_log_context(list(stage = "filter"), {                 # stage context: filtering
-    df <- filter_years(df_plus, years = 2021:2023)           # keep only rows in allowed FundingYear set
-    assert_year_filter(df, allowed_years = 2021:2023)        # double-check invariant post-filter
-    rows_filtered <<- nrow(df)
-  })
-
-  if (interactive_mode) {
-    cat(sprintf("Processing dataset… (%d rows loaded, %d filtered for 2021–2023)\n",
-                rows_loaded, rows_filtered))
-  }
-
-  # ---- Stage 6: Reports -------------------------------------------------------
-  with_log_context(list(stage = "report1"), {                # context: report 1
-    r1 <- report_regional_efficiency(df)                     # compute Regional Flood Mitigation Efficiency
-  })
-  with_log_context(list(stage = "report2"), {                # context: report 2
-    r2 <- report_contractor_ranking(df)                      # compute Top Contractors ranking
-  })
-  with_log_context(list(stage = "report3"), {                # context: report 3
-    r3 <- report_overrun_trends(df)                          # compute Overrun trends vs 2021
-  })
-
-  # ---- Stage 7: Summary -------------------------------------------------------
-  with_log_context(list(stage = "summary"), {                # context: summary
-    sumry <- build_summary(df)                               # build JSON-ready summary payload
-  })
-
-  # ---- Stage 8: Outputs (atomic writes) --------------------------------------
-  with_log_context(list(stage = "output"), {                 # context: output writing
-    ensure_outdir(args$outdir)                               # create output directory if it does not exist
-
-    f1 <- path_report1(args$outdir)
-    f2 <- path_report2(args$outdir)
-    f3 <- path_report3(args$outdir)
-    fj <- path_summary(args$outdir)
-
-    fmt_opts <- list(
-      exclude = c("FundingYear", "Year", "N", "NProjects", "NumProjects", "Rank"),
-      comma_strings = TRUE,
-      digits = 2
-    )
-
-    r1_fmt <- do.call(format_dataframe, c(list(r1), fmt_opts))
-    r2_fmt <- do.call(format_dataframe, c(list(r2), fmt_opts))
-    r3_fmt <- do.call(format_dataframe, c(list(r3), fmt_opts))
-
-    if (interactive_mode) {
-      preview <- function(title, df_fmt, path) {
-        cat(sprintf("\n%s\n", title))
-        if (nrow(df_fmt) == 0) {
-          cat("[No rows]\n")
-        } else {
-          print(utils::head(df_fmt, 2), row.names = FALSE)
-        }
-        cat(sprintf("(Full table exported to %s)\n", path))
-      }
-      preview("Report 1 — Regional Summary", r1_fmt, f1)
-      preview("Report 2 — Contractor Ranking", r2_fmt, f2)
-      preview("Report 3 — Annual Trends", r3_fmt, f3)
+  if (!interactive_mode) {
+    prep <- .pipeline_prepare(args)
+    .pipeline_generate_outputs(prep, args, fmt_opts)
+  } else {
+    show_menu <- function() {
+      cat("Select Language Implementation:\n")
+      cat("[1] Load the file\n")
+      cat("[2] Generate Reports\n\n")
     }
 
-    write_report_csv(r1_fmt, f1)
-    write_report_csv(r2_fmt, f2)
-    write_report_csv(r3_fmt, f3)
-    write_summary_json(sumry, fj)                            # write summary JSON (pretty, auto_unbox)
-  })
+    show_menu()
+    invisible(readline("Enter choice: "))
+    prep <- .pipeline_prepare(args)
+    cat(sprintf("Processing dataset... (%d rows loaded, %d filtered for 2021–2023)\n",
+                prep$rows_loaded, prep$rows_filtered))
+
+    cat("\n")
+    show_menu()
+    invisible(readline("Enter choice: "))
+    cat("\nGenerating reports...\n")
+    results <- .pipeline_generate_outputs(prep, args, fmt_opts)
+    cat("Outputs saved to individual files...\n\n")
+
+    preview <- function(title, df_fmt, path) {
+      cat(sprintf("%s\n", title))
+      if (nrow(df_fmt) == 0) {
+        cat("[No rows]\n")
+      } else {
+        print(utils::head(df_fmt, 3), row.names = FALSE)
+      }
+      cat(sprintf("(Full table exported to %s)\n\n", basename(path)))
+    }
+
+    preview("Report 1 — Regional Flood Mitigation Efficiency Summary", results$formatted$report1, results$paths$report1)
+    preview("Report 2 — Top Contractors Performance Ranking", results$formatted$report2, results$paths$report2)
+    preview("Report 3 — Annual Project Type Cost Overrun Trends", results$formatted$report3, results$paths$report3)
+
+    summary_json <- jsonlite::toJSON(results$summary, auto_unbox = TRUE, na = "null")
+    cat(sprintf("Summary Stats (summary.json): %s\n\n", summary_json))
+    invisible(readline("Back to Report Selection (Y/N): "))
+  }
 
   # ---- Epilogue & duration ----------------------------------------------------
   elapsed <- round(as.numeric(difftime(Sys.time(), start_time, units = "secs")), 2)  # compute elapsed seconds

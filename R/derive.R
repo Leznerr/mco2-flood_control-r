@@ -38,7 +38,11 @@ derive_fields <- function(df) {                              # append CostSaving
         }
         cs
       },
-      CompletionDelayDays = as.numeric(ActualCompletionDate - StartDate)
+      CompletionDelayDays = {
+        delay <- as.numeric(ActualCompletionDate - StartDate)
+        delay[!is.na(delay) & delay < 0] <- 0
+        delay
+      }
     )
   overruns <- sum(df2$CostSavings < 0, na.rm = TRUE)
   delay_na <- sum(is.na(df2$CompletionDelayDays))

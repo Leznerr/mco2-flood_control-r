@@ -26,9 +26,14 @@ report_contractor_ranking <- function(df) {                  # build contractor 
     arrange(desc(TotalCost), Contractor) %>%
     slice_head(n = 15) %>%
     mutate(
-      ri_raw = (1 - pmax(0, AvgDelay) / 90) * pmax(0, TotalSavings) / pmax(1, TotalCost),
-      ReliabilityIndex = pmax(0, pmin(100, 100 * ri_raw)),
-      RiskFlag = ifelse(ReliabilityIndex < 50, "High Risk", "Low Risk"),
+      ReliabilityIndex = {
+        ri <- (1 - (AvgDelay / 90)) * (TotalSavings / TotalCost) * 100
+        bad <- !is.finite(ri) | is.na(TotalCost) | TotalCost <= 0
+        ri[bad] <- NA_real_
+        ri <- pmax(0, pmin(ri, 100))
+        ri
+      },
+      RiskFlag = ifelse(is.na(ReliabilityIndex) | ReliabilityIndex < 50, "High Risk", "Low Risk"),
       Rank = dplyr::row_number()
     ) %>%
     select(Rank, Contractor, TotalCost, NumProjects, AvgDelay, TotalSavings, ReliabilityIndex, RiskFlag)

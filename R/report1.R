@@ -21,12 +21,16 @@ report_regional_efficiency <- function(df) {                 # build report 1 su
       TotalBudget = safe_sum(ApprovedBudgetForContract),
       MedianSavings = safe_median(CostSavings),
       AvgDelay = safe_mean(CompletionDelayDays),
-      HighDelayPct = 100 * safe_mean(CompletionDelayDays > 90),
-      RawEfficiency = (MedianSavings / pmax(AvgDelay, 0.5)) * 100,
+      HighDelayPct = 100 * safe_mean(CompletionDelayDays > 30),
+      EfficiencyRaw = dplyr::if_else(
+        !is.na(MedianSavings) & !is.na(AvgDelay) & AvgDelay > 0,
+        (MedianSavings / AvgDelay) * 100,
+        NA_real_
+      ),
       .groups = "drop"
     ) %>%
     mutate(
-      EfficiencyScore = pmax(0, pmin(100, minmax_0_100(RawEfficiency)))
+      EfficiencyScore = pmax(0, pmin(100, minmax_0_100(EfficiencyRaw)))
     ) %>%
     select(Region, MainIsland, TotalBudget, MedianSavings, AvgDelay, HighDelayPct, EfficiencyScore) %>%
     arrange(desc(EfficiencyScore), Region, MainIsland)

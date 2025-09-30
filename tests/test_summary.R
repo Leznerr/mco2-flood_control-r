@@ -62,7 +62,7 @@ test_that("summary total_savings is finite or NA but never absurd", {
     CostSavings = c(rep(1e6, 1000), 1e146)
   )
   payload <- build_summary(df)
-  expect_true(is.na(payload$total_savings) || abs(payload$total_savings) <= 1e13)
+  expect_true(is.na(payload$total_savings))
 })
 
 test_that("summary fields exist and totals are realistic", {
