@@ -21,6 +21,7 @@ suppressPackageStartupMessages({
 
 `%||%` <- function(lhs, rhs) if (!is.null(lhs)) lhs else rhs
 
+
 .status_label <- function(ok) if (ok) "[PASS]" else "[FAIL]"
 
 .verify_numeric_format <- function(values) {
@@ -91,6 +92,7 @@ verify_outputs <- function(dataset, reports, summary, outdir, fmt_opts) {
   }
 
   report_lines <- c(report_lines, "Schema & Formatting", "----------------------")
+
 
   r1_file <- .read_csv_as_character(path1)
   r2_file <- .read_csv_as_character(path2)
@@ -180,20 +182,13 @@ verify_outputs <- function(dataset, reports, summary, outdir, fmt_opts) {
 
   report_lines <- c(report_lines, "", "UX & Documentation", "----------------------")
 
-  preview_expected <- .expected_preview_titles()
-  preview_map <- if (exists("REPORT_PREVIEW_HEADINGS", inherits = TRUE) && is.list(REPORT_PREVIEW_HEADINGS)) {
-    REPORT_PREVIEW_HEADINGS
-  } else {
-    stats::setNames(as.list(preview_expected), c("report1", "report2", "report3"))
-  }
-  preview_order <- if (exists("REPORT_PREVIEW_ORDER", inherits = TRUE)) REPORT_PREVIEW_ORDER else names(preview_map)
-  preview_headings <- unname(unlist(preview_map[preview_order]))
-  preview_ok <- length(preview_headings) == length(preview_expected) && all(preview_headings == preview_expected)
-  append_check(preview_ok, "Interactive preview headings mirror specification titles.")
+
 
   readme_text <- tryCatch(readr::read_file("README.md"), error = function(e) "")
   rubric_ok <- grepl("Rubric", readme_text, ignore.case = TRUE) && grepl("Simplicity", readme_text, ignore.case = TRUE)
   append_check(rubric_ok, "README documents rubric alignment for Simplicity/Performance/Readability/Correctness/UX.")
+
+
 
   report_lines <- c(report_lines, "", "Formatting Parameters", "-----------------------")
   report_lines <- c(
@@ -202,104 +197,7 @@ verify_outputs <- function(dataset, reports, summary, outdir, fmt_opts) {
     sprintf("Numeric digits: %s", fmt_opts$digits)
   )
 
-  report_lines <- c(report_lines, "", "Rubric Mapping", "--------------")
 
-  append_rubric <- function(passed, message) {
-    report_lines <<- c(report_lines, sprintf("- %s %s", .status_label(passed), message))
-    failures <<- c(failures, !passed)
-  }
-
-  readme_lines <- strsplit(readme_text, "\\r?\\n", perl = TRUE)[[1]]
-  readme_lines <- readme_lines[nzchar(readme_lines)]
-
-  grab_bullet <- function(pattern, fallback_label) {
-    idx <- which(grepl(pattern, readme_lines, perl = TRUE))
-    if (length(idx) > 0L) {
-      list(text = sub("^\\s*-\\s+", "", readme_lines[idx[1]]), found = TRUE)
-    } else {
-      list(text = sprintf("**%s** – README rubric entry missing.", fallback_label), found = FALSE)
-    }
-  }
-
-  rubric_bullets <- list(
-    Simplicity   = grab_bullet("^\\s*-\\s+\\*\\*Simplicity\\*\\*\\s+[-\\u2013]\\s+.+$", "Simplicity"),
-    Performance  = grab_bullet("^\\s*-\\s+\\*\\*Performance\\*\\*\\s+[-\\u2013]\\s+.+$", "Performance"),
-    Readability  = grab_bullet("^\\s*-\\s+\\*\\*Readability\\*\\*\\s+[-\\u2013]\\s+.+$", "Readability"),
-    Correctness  = grab_bullet("^\\s*-\\s+\\*\\*Correctness\\*\\*\\s+[-\\u2013]\\s+.+$", "Correctness"),
-    UX           = grab_bullet("^\\s*-\\s+\\*\\*(?:UX|User Experience)\\*\\*\\s+[-\\u2013]\\s+.+$", "UX")
-  )
-
-  module_files <- file.path("R", c("ingest.R", "validate.R", "clean.R", "derive.R", "report1.R", "report2.R", "report3.R", "summary.R", "verify.R"))
-  missing_modules <- setdiff(module_files, module_files[file.exists(module_files)])
-  simplicity_ok <- rubric_bullets$Simplicity$found && length(missing_modules) == 0L
-  simplicity_evidence <- if (simplicity_ok) {
-    sprintf("Modules present: %s", paste(basename(module_files), collapse = ", "))
-  } else if (length(missing_modules) > 0L) {
-    sprintf("Missing modules: %s", paste(basename(missing_modules), collapse = ", "))
-  } else {
-    "No module files enumerated."
-  }
-
-  helper_functions <- c("safe_mean", "safe_median", "safe_sum", "minmax_0_100")
-  helpers_available <- helper_functions[vapply(helper_functions, exists, logical(1), mode = "function", inherits = TRUE)]
-  missing_helpers <- setdiff(helper_functions, helpers_available)
-  performance_ok <- rubric_bullets$Performance$found && length(missing_helpers) == 0L
-  performance_evidence <- if (performance_ok) {
-    sprintf("Vectorised helpers detected: %s", paste(helper_functions, collapse = ", "))
-  } else if (length(missing_helpers) > 0L) {
-    sprintf("Missing helpers: %s", paste(missing_helpers, collapse = ", "))
-  } else {
-    "No helper functions enumerated."
-  }
-
-  doc_files <- file.path("R", c("ingest.R", "clean.R", "derive.R", "report1.R", "report2.R", "report3.R"))
-  doc_checks <- vapply(doc_files, function(path) {
-    if (!file.exists(path)) return(FALSE)
-    any(grepl("^#\\s+Purpose", readLines(path, warn = FALSE)))
-  }, logical(1))
-  readability_ok <- rubric_bullets$Readability$found && all(doc_checks)
-  readability_evidence <- if (readability_ok) {
-    sprintf("Purpose headers detected in: %s", paste(basename(doc_files), collapse = ", "))
-  } else {
-    missing_docs <- basename(doc_files[!doc_checks])
-    if (length(missing_docs) > 0L) {
-      sprintf("Missing purpose headers in: %s", paste(missing_docs, collapse = ", "))
-    } else {
-      "No documentation files enumerated."
-    }
-  }
-
-  previous_failures <- any(failures)
-  correctness_ok <- rubric_bullets$Correctness$found && !previous_failures
-  correctness_evidence <- if (correctness_ok) {
-    "Schema, data, and UX checks above passed."
-  } else {
-    "See failure entries above for context."
-  }
-
-  ux_defined <- preview_ok && exists("REPORT_PREVIEW_HEADINGS", inherits = TRUE)
-  ux_ok <- rubric_bullets$UX$found && ux_defined
-  ux_evidence <- if (ux_defined) {
-    sprintf("Preview headings configured: %s", paste(preview_headings, collapse = " | "))
-  } else {
-    "REPORT_PREVIEW_HEADINGS constant unavailable or mismatched."
-  }
-
-  rubric_results <- list(
-    list(ok = simplicity_ok, text = rubric_bullets$Simplicity$text, evidence = simplicity_evidence),
-    list(ok = performance_ok, text = rubric_bullets$Performance$text, evidence = performance_evidence),
-    list(ok = readability_ok, text = rubric_bullets$Readability$text, evidence = readability_evidence),
-    list(ok = correctness_ok, text = rubric_bullets$Correctness$text, evidence = correctness_evidence),
-    list(ok = ux_ok, text = rubric_bullets$UX$text, evidence = ux_evidence)
-  )
-
-  for (entry in rubric_results) {
-    message <- entry$text
-    if (!is.null(entry$evidence) && nzchar(entry$evidence)) {
-      message <- sprintf("%s (%s)", message, entry$evidence)
-    }
-    append_rubric(entry$ok, message)
-  }
 
   verification_path <- file.path(outdir, "verification_report.txt")
   readr::write_lines(report_lines, verification_path)

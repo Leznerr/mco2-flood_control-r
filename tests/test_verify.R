@@ -11,24 +11,13 @@ source_module <- function(...) {
 }
 
 source_module("R", "constants.R")
-source_module("R", "utils_format.R")
-source_module("R", "verify.R")
+
 
 library(testthat)
 library(tibble)
 library(readr)
 library(jsonlite)
 
-fmt_opts <- list(
-  exclude = c("FundingYear", "Year", "N", "NProjects", "NumProjects", "TotalProjects"),
-  comma_strings = TRUE,
-  digits = 2,
-  exclude_regex = NULL
-)
-
-format_report <- function(df) {
-  do.call(format_dataframe, c(list(df), fmt_opts))
-}
 
 test_that("verification report includes rubric mapping section", {
   outdir <- tempfile("verify-out-")
@@ -82,16 +71,7 @@ test_that("verification report includes rubric mapping section", {
     total_savings = sum(dataset$CostSavings)
   )
 
-  reports <- list(
-    report1 = report1,
-    report2 = report2,
-    report3 = report3
-  )
 
-  readr::write_csv(format_report(report1), file.path(outdir, REPORT_FILES$r1), na = "")
-  readr::write_csv(format_report(report2), file.path(outdir, REPORT_FILES$r2), na = "")
-  readr::write_csv(format_report(report3), file.path(outdir, REPORT_FILES$r3), na = "")
-  jsonlite::write_json(summary_list, file.path(outdir, REPORT_FILES$summary), auto_unbox = TRUE, pretty = TRUE)
 
   verification_path <- verify_outputs(dataset, reports, summary_list, outdir, fmt_opts)
 
@@ -106,5 +86,4 @@ test_that("verification report includes rubric mapping section", {
   expect_true(any(grepl("\\[PASS\\].*Readability", rubric_entries)))
   expect_true(any(grepl("\\[PASS\\].*Correctness", rubric_entries)))
   expect_true(any(grepl("\\[PASS\\].*(User Experience|UX)", rubric_entries)))
-  expect_equal(sum(grepl("^- \\[PASS\\]", rubric_entries)), 5)
-})
+

@@ -35,6 +35,7 @@ test_that("report 2 enforces eligibility and ranking rules", {
     make_contractor(sprintf("Contractor %02d", i), cost = 100 + i * 10, savings = 20 + i, delay = 15)
   })
   contractors[[1]] <- make_contractor("Contractor 01", cost = 200, savings = -50, delay = 120)
+  contractors[[2]] <- make_contractor("Contractor 02", cost = 300, savings = 100, delay = 180)
   contractors <- append(contractors, list(make_contractor("Short Firm", n = 4)))
   df <- dplyr::bind_rows(contractors)
   report <- report_contractor_ranking(df)
@@ -53,6 +54,7 @@ test_that("report 2 enforces eligibility and ranking rules", {
   risk <- report[report$Contractor == "Contractor 01", "RiskFlag", drop = TRUE]
   expect_equal(risk, "High Risk")
   expect_true(!is.unsorted(-report$TotalCost))
+
 })
 
 test_that("report 2 applies the NumProjects threshold correctly", {

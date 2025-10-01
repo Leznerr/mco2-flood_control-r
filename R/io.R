@@ -111,7 +111,7 @@ write_summary_json <- function(x, path) {                    # JSON writer with 
   dir <- dirname(path)
   if (!dir.exists(dir)) ensure_outdir(dir)
   tmp <- tempfile(pattern = paste0(basename(path), "."), tmpdir = dir)
-  jsonlite::write_json(x, tmp, auto_unbox = TRUE, pretty = TRUE, digits = NA, na = "null")
+  jsonlite::write_json(x, tmp, auto_unbox = TRUE, pretty = TRUE, digits = 2, na = "null")
   .atomic_replace(tmp, path, "write_summary_json()")
   invisible(path)
 }

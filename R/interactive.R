@@ -23,8 +23,8 @@ if (!exists("REPORT_PREVIEW_HEADINGS", inherits = TRUE)) {
     stop(sprintf(".run_interactive_spec(): missing report(s): %s", paste(missing, collapse = ", ")))
   }
 
-  cat("Interactive Preview\n")
-  cat("===================\n\n")
+  cat(REPORT_PREVIEW_TITLE, "\n", sep = "")
+  cat(REPORT_PREVIEW_RULE, "\n\n", sep = "")
 
   for (key in expected_keys) {
     heading <- REPORT_PREVIEW_HEADINGS[[key]]

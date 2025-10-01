@@ -1,22 +1,29 @@
 # constants.R
 # ------------------------------------------------------------------------------
-# Purpose   : Central place for shared string constants used by the pipeline,
-#             especially values that must stay in sync between the interactive
-#             CLI preview and the verification suite.
+# Purpose   : Provide shared literal strings used by the interactive CLI and
+#             verification suite so that user-facing copy stays in sync with the
+#             specification and automated checks. All constants defined here are
+#             treated as the single source of truth for transcript headings and
+#             column descriptions referenced in `main.R` and `verify.R`.
 # ------------------------------------------------------------------------------
 
-REPORT_FILES <- list(
-  r1 = "report1_regional_efficiency.csv",
-  r2 = "report2_top_contractors.csv",
-  r3 = "report3_overrun_trends.csv",
-  summary = "summary.json"
+INTERACTIVE_MENU_TITLE <- "Select Language Implementation:"
+INTERACTIVE_MENU_OPTIONS <- c(
+  "[1] Load the file",
+  "[2] Generate Reports"
 )
 
-REPORT_PREVIEW_HEADINGS <- list(
-  report1 = "Report 1: Regional Flood Mitigation Efficiency",
-  report2 = "Report 2: Top Contractors Performance Ranking",
-  report3 = "Report 3: Annual Project Type Cost Overrun Trends"
+INTERACTIVE_REPORT_HEADINGS <- c(
+  "Report 1: Regional Flood Mitigation Efficiency Summary",
+  "Report 2: Top Contractors Performance Ranking",
+  "Report 3: Annual Project Type Cost Overrun Trends"
 )
 
-REPORT_PREVIEW_ORDER <- c("report1", "report2", "report3")
+INTERACTIVE_REPORT_COLUMNS <- list(
+  report1 = "Region, MainIsland, TotalApprovedBudget, MedianSavings, AvgDelay, Delay30Rate, EfficiencyScore",
+  report2 = "Contractor, NumProjects, TotalCost, AvgDelay, TotalSavings, ReliabilityIndex, RiskFlag",
+  report3 = "FundingYear, TypeOfWork, TotalProjects, AvgSavings, OverrunRate, YoYChange"
+)
+
+SUMMARY_FILENAME_LABEL <- "summary.json"
 
