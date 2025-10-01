@@ -17,7 +17,21 @@ suppressPackageStartupMessages({                             # ensure clean cons
   library(jsonlite)
 })
 
-
+# Ensure shared constants (filenames + path helpers) are available --------------
+if (!exists("REPORT_FILES", inherits = TRUE)) {             # source constants lazily for tests
+  candidates <- c("R/constants.R", "../R/constants.R", file.path("..", "R", "constants.R"), "constants.R")
+  loaded <- FALSE
+  for (path in candidates) {
+    if (file.exists(path)) {
+      source(path, chdir = TRUE)
+      loaded <- TRUE
+      break
+    }
+  }
+  if (!loaded) {
+    stop("io.R: REPORT_FILES constant not found; ensure R/constants.R is available.")
+  }
+}
 
 # ---- readr write compatibility (pre-2.0 vs >=2.0) ----------------------------
 .readr_has_escape <- function() {
@@ -117,29 +131,28 @@ write_summary_json <- function(x, path) {                    # JSON writer with 
 }
 
 write_report1 <- function(df, outdir, fmt_opts = list()) {
-  path <- .path_join(outdir, REPORT_FILES$r1)
+  path <- path_report1(outdir)
   args <- c(list(df = df, path = path), fmt_opts)
   do.call(write_report_csv, args)
   path
 }
 
 write_report2 <- function(df, outdir, fmt_opts = list()) {
-  path <- .path_join(outdir, REPORT_FILES$r2)
+  path <- path_report2(outdir)
   args <- c(list(df = df, path = path), fmt_opts)
   do.call(write_report_csv, args)
   path
 }
 
 write_report3 <- function(df, outdir, fmt_opts = list()) {
-  path <- .path_join(outdir, REPORT_FILES$r3)
+  path <- path_report3(outdir)
   args <- c(list(df = df, path = path), fmt_opts)
   do.call(write_report_csv, args)
   path
 }
 
 write_summary_outdir <- function(x, outdir) {
-  path <- .path_join(outdir, REPORT_FILES$summary)
+  path <- path_summary(outdir)
   write_summary_json(x, path)
   path
 }
-
