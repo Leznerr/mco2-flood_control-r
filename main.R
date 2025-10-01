@@ -30,10 +30,12 @@ suppressPackageStartupMessages({                            # suppress package b
 }
 
 # Source logging & utilities first (used by all stages) -------------------------
+.source_or_die("R/constants.R")                              # shared filenames/headings used across modules
 .source_or_die("R/utils_log.R")                              # log_* API (INFO/WARN/ERROR + context helpers)
 .source_or_die("R/utils_cli.R")                              # build_cli(), validate_cli_args(), normalize_cli_paths()
 .source_or_die("R/utils_format.R")                           # safe_mean/median, minmax_0_100, format_dataframe()
 .source_or_die("R/io.R")                                     # ensure_outdir(), write_report_csv(), write_summary_json()
+.source_or_die("R/interactive.R")                            # .run_interactive_spec() preview helper
 
 # Source pipeline stage modules -------------------------------------------------
 .source_or_die("R/ingest.R")                                 # ingest_csv()
