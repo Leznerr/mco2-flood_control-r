@@ -12,6 +12,9 @@ REPORT_FILES <- list(
   summary = "summary.json"
 )
 
+REPORT_PREVIEW_TITLE <- "Interactive Preview"
+REPORT_PREVIEW_RULE  <- "==================="
+
 REPORT_PREVIEW_HEADINGS <- list(
   report1 = "Report 1: Regional Flood Mitigation Efficiency",
   report2 = "Report 2: Top Contractors Performance Ranking",
