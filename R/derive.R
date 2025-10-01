@@ -39,15 +39,16 @@ derive_fields <- function(df) {                              # append CostSaving
         }
         cs
       },
-      CompletionDelayDays = {
-        delay <- as.numeric(ActualCompletionDate - StartDate)
-        delay[!is.na(delay) & delay < 0] <- 0
-        delay
-      }
+      CompletionDelayDays = as.numeric(ActualCompletionDate - StartDate)
     )
   overruns <- sum(df2$CostSavings < 0, na.rm = TRUE)
   delay_na <- sum(is.na(df2$CompletionDelayDays))
-  .log_info("Derivations summary | cost_overruns=%d | delay_na=%d", overruns, delay_na)
+  delay_gt30 <- sum(df2$CompletionDelayDays > 30, na.rm = TRUE)
+  delay_negative <- sum(df2$CompletionDelayDays < 0, na.rm = TRUE)
+  .log_info(
+    "Derivations summary | cost_overruns=%d | delay_na=%d | delay_gt30=%d | early_completions=%d",
+    overruns, delay_na, delay_gt30, delay_negative
+  )
   df2
 }
 
