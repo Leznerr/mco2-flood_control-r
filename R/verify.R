@@ -19,6 +19,26 @@ suppressPackageStartupMessages({
   library(jsonlite)
 })
 
+if (!exists("REPORT_PREVIEW_HEADINGS", inherits = TRUE) ||
+    !exists("REPORT_PREVIEW_ORDER", inherits = TRUE) ||
+    !exists("REPORT_PREVIEW_TITLE", inherits = TRUE) ||
+    !exists("REPORT_PREVIEW_RULE", inherits = TRUE) ||
+    !exists("REPORT_FILES", inherits = TRUE)) {
+  constants_candidates <- c("constants.R", file.path("R", "constants.R"))
+  const_path <- constants_candidates[file.exists(constants_candidates)][1]
+  if (!is.na(const_path) && nzchar(const_path)) {
+    source(const_path, chdir = TRUE)
+  }
+}
+
+if (!exists(".run_interactive_spec", inherits = TRUE)) {
+  interactive_candidates <- c("interactive.R", file.path("R", "interactive.R"))
+  interactive_path <- interactive_candidates[file.exists(interactive_candidates)][1]
+  if (!is.na(interactive_path) && nzchar(interactive_path)) {
+    source(interactive_path, chdir = TRUE)
+  }
+}
+
 
 .status_label <- function(ok) if (ok) "[PASS]" else "[FAIL]"
 
@@ -63,21 +83,24 @@ verify_outputs <- function(dataset, reports, summary, outdir, fmt_opts) {
 
   report_lines <- c(report_lines, "Schema & Formatting", "----------------------")
 
-
+  path1 <- file.path(outdir, REPORT_FILES$r1)
+  path2 <- file.path(outdir, REPORT_FILES$r2)
+  path3 <- file.path(outdir, REPORT_FILES$r3)
+  path_summary_json <- file.path(outdir, REPORT_FILES$summary)
 
   r1_file <- .read_csv_as_character(path1)
   r2_file <- .read_csv_as_character(path2)
   r3_file <- .read_csv_as_character(path3)
 
 
+  expected_r1 <- c("Region", "MainIsland", "TotalBudget", "MedianSavings", "AvgDelay", "HighDelayPct", "EfficiencyScore")
   expected_r2 <- c("Contractor", "NumProjects", "TotalCost", "AvgDelay", "TotalSavings", "ReliabilityIndex", "RiskFlag")
   expected_r3 <- c("FundingYear", "TypeOfWork", "TotalProjects", "AvgSavings", "OverrunRate", "YoYChange")
 
   append_check(identical(names(r1_file), expected_r1), "Report 1 header matches expected schema.")
   append_check(identical(names(r2_file), expected_r2), "Report 2 header matches expected schema.")
   append_check(identical(names(r3_file), expected_r3), "Report 3 header matches expected schema.")
-
-
+  overrun_ok <- all(is.na(reports$report3$OverrunRate) | (reports$report3$OverrunRate >= 0 & reports$report3$OverrunRate <= 100))
   append_check(overrun_ok, "OverrunRate within [0,100].")
 
   risk_flag_expected <- ifelse(is.na(reports$report2$ReliabilityIndex) | reports$report2$ReliabilityIndex < 50, "High Risk", "Low Risk")
@@ -119,6 +142,15 @@ verify_outputs <- function(dataset, reports, summary, outdir, fmt_opts) {
 
   report_lines <- c(report_lines, "", "UX & Documentation", "----------------------")
 
+  preview_expected_headings <- unname(unlist(REPORT_PREVIEW_HEADINGS[REPORT_PREVIEW_ORDER]))
+  preview_capture <- utils::capture.output(.run_interactive_spec(reports, preview_rows = 0L))
+  preview_trimmed <- trimws(preview_capture, which = "right")
+  preview_title_ok <- length(preview_trimmed) >= 2L &&
+    identical(preview_trimmed[1], REPORT_PREVIEW_TITLE) &&
+    identical(preview_trimmed[2], REPORT_PREVIEW_RULE)
+  preview_headings_found <- preview_trimmed[preview_trimmed %in% preview_expected_headings]
+  preview_heading_ok <- identical(preview_headings_found, preview_expected_headings)
+  preview_ok <- preview_title_ok && preview_heading_ok
 
   append_check(preview_ok, "Interactive preview headings mirror sample output titles.")
 
