@@ -35,15 +35,29 @@ test_that("report 2 enforces eligibility and ranking rules", {
     make_contractor(sprintf("Contractor %02d", i), cost = 100 + i * 10, savings = 20 + i, delay = 15)
   })
   contractors[[1]] <- make_contractor("Contractor 01", cost = 200, savings = -50, delay = 120)
+  contractors[[2]] <- make_contractor("Contractor 02", cost = 300, savings = 100, delay = 180)
   contractors <- append(contractors, list(make_contractor("Short Firm", n = 4)))
   df <- dplyr::bind_rows(contractors)
   report <- report_contractor_ranking(df)
-  expect_equal(colnames(report), c("Rank", "Contractor", "TotalCost", "NumProjects", "AvgDelay", "TotalSavings", "ReliabilityIndex", "RiskFlag"))
+  expect_equal(
+    colnames(report),
+    c(
+      "Contractor",
+      "NumProjects",
+      "TotalCost",
+      "AvgDelay",
+      "TotalSavings",
+      "ReliabilityIndex",
+      "RiskFlag"
+    )
+  )
   expect_lte(nrow(report), 15)
   expect_false("Short Firm" %in% report$Contractor)
   risk <- report[report$Contractor == "Contractor 01", "RiskFlag", drop = TRUE]
   expect_equal(risk, "High Risk")
-  expect_true(all(report$Rank == seq_len(nrow(report))))
+  expect_true(!is.unsorted(-report$TotalCost))
+  negative_ri <- report[report$Contractor == "Contractor 02", "ReliabilityIndex", drop = TRUE]
+  expect_lt(negative_ri, 0)
 })
 
 test_that("report 2 applies the NumProjects threshold correctly", {
@@ -57,5 +71,4 @@ test_that("report 2 applies the NumProjects threshold correctly", {
   expect_true("Firm 5" %in% report$Contractor)
   expect_true("Firm 6" %in% report$Contractor)
   expect_true(all(report$ReliabilityIndex <= 100, na.rm = TRUE))
-  expect_true(all(report$ReliabilityIndex >= 0, na.rm = TRUE))
 })
