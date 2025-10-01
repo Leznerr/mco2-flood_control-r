@@ -228,6 +228,29 @@ clean_all <- function(df) {                                                # def
     ) %>%
     select(-mean_lat, -mean_lon, -.both_na)                                 # drop helper columns to restore schema
 
+  remaining_geo_na <- sum(is.na(df2$Latitude) & is.na(df2$Longitude))
+  if (exists("log_info", mode = "function")) {
+    log_info("Post-imputation geo gaps: %d rows still lack coordinates", remaining_geo_na)
+  } else {
+    message(sprintf("[INFO] Post-imputation geo gaps: %d rows still lack coordinates", remaining_geo_na))
+  }
+
+  df3 <- df2 %>%
+    filter(
+      !is.na(StartDate),
+      !is.na(ActualCompletionDate),
+      !is.na(ApprovedBudgetForContract),
+      !is.na(ContractCost)
+    )
+  dropped_core <- nrow(df2) - nrow(df3)
+  if (dropped_core > 0) {
+    if (exists("log_warn", mode = "function")) {
+      log_warn("Dropped %d rows missing core schedule/cost fields after cleaning.", dropped_core)
+    } else {
+      message(sprintf("[WARN] Dropped %d rows missing core schedule/cost fields after cleaning.", dropped_core))
+    }
+  }
+
   # ---- NA reduction logging (compact; robust; comma-free) ----------------------
   cols_track <- c(
     "Region","MainIsland","Province","FundingYear","TypeOfWork",
@@ -239,7 +262,7 @@ clean_all <- function(df) {                                                # def
     ..na_before <- vapply(cols_track, function(n) sum(is.na(df[[n]])), integer(1))
   }
 
-  na_after <- vapply(cols_track, function(n) sum(is.na(df2[[n]])), integer(1))
+  na_after <- vapply(cols_track, function(n) sum(is.na(df3[[n]])), integer(1))
   na_delta <- ..na_before - na_after
 
   if (exists("log_info", mode = "function")) {
@@ -255,8 +278,8 @@ clean_all <- function(df) {                                                # def
     max_v <- suppressWarnings(max(abs(v), na.rm = TRUE))
     if (is.finite(max_v)) format(max_v, scientific = FALSE) else "NA"
   }
-  max_budget <- max_formatter(df2$ApprovedBudgetForContract)
-  max_cost   <- max_formatter(df2$ContractCost)
+  max_budget <- max_formatter(df3$ApprovedBudgetForContract)
+  max_cost   <- max_formatter(df3$ContractCost)
   if (exists("log_info", mode = "function")) {
     log_info("Max |Budget|=%s |Cost|=%s", max_budget, max_cost)
   } else {
@@ -266,11 +289,11 @@ clean_all <- function(df) {                                                # def
   rm(list="..na_before", inherits = FALSE)
 
   # ---- Postconditions: column integrity (order and set) ----------------------
-  if (!identical(names(df2), orig_cols)) {                                  # ensure we didn't change names/order inadvertently
+  if (!identical(names(df3), orig_cols)) {                                  # ensure we didn't change names/order inadvertently
     .log_warn("Column order/set changed during cleaning; restoring original header order.") # warn for developer visibility
-    df2 <- df2[, orig_cols, drop = FALSE]                                   # restore original column order strictly
+    df3 <- df3[, orig_cols, drop = FALSE]                                   # restore original column order strictly
   }
 
   # ---- Return cleaned dataframe ----------------------------------------------
-  return(df2)                                                               # yield standardized, conservatively-imputed table
+  return(df3)                                                               # yield standardized, conservatively-imputed table
 }
