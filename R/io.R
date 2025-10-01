@@ -18,7 +18,6 @@ suppressPackageStartupMessages({                             # ensure clean cons
 })
 
 
-
 # ---- readr write compatibility (pre-2.0 vs >=2.0) ----------------------------
 .readr_has_escape <- function() {
   tryCatch(utils::packageVersion("readr") >= "2.0.0", error = function(...) FALSE)

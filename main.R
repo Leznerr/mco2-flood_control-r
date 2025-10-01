@@ -43,19 +43,3 @@ suppressPackageStartupMessages({                            # suppress package b
 .source_or_die("R/derive.R")                                 # derive_fields(), filter_years()
 .source_or_die("R/report1.R")                                # report_regional_efficiency()
 
-
-# ------------------------------- Safe execution --------------------------------
-tryCatch(                                                # wrap execution to surface errors with non-zero exit
-  {
-    main()                                               # invoke main orchestration function
-  },
-  error = function(e) {                                  # handle any error thrown during pipeline execution
-    msg <- conditionMessage(e)
-    if (exists("log_error", mode = "function")) {
-      log_error("%s", msg)
-    } else {
-      message(sprintf("[ERROR] %s", msg))
-    }
-    quit(save = "no", status = 1L)                       # exit with failure status for CI/grading
-  }
-)
