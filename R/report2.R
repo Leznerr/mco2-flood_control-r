@@ -3,7 +3,8 @@
 # Purpose   : Produce the Top Contractors Performance Ranking report.
 # Contract  : report_contractor_ranking(df) -> tibble with columns
 #   Contractor, NumProjects, TotalCost, AvgDelay, TotalSavings,
-
+#   ReliabilityIndex, RiskFlag. Keeps contractors with ≥5 projects, top 15 by
+#   TotalCost (descending).
 # ------------------------------------------------------------------------------
 
 suppressPackageStartupMessages({                             # quiet load
@@ -29,7 +30,10 @@ report_contractor_ranking <- function(df) {                  # build contractor 
         ri <- (1 - (AvgDelay / 90)) * (TotalSavings / TotalCost) * 100
         bad <- !is.finite(ri) | is.na(TotalCost) | TotalCost <= 0
         ri[bad] <- NA_real_
-
+        ri <- pmin(ri, 100)
+        ri
+      },
+      RiskFlag = dplyr::if_else(is.na(ReliabilityIndex) | ReliabilityIndex < 50, "High Risk", "Low Risk")
     ) %>%
     select(Contractor, NumProjects, TotalCost, AvgDelay, TotalSavings, ReliabilityIndex, RiskFlag)
 }

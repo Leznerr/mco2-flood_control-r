@@ -19,6 +19,7 @@ suppressPackageStartupMessages({
   library(jsonlite)
 })
 
+`%||%` <- function(lhs, rhs) if (!is.null(lhs)) lhs else rhs
 
 
 .status_label <- function(ok) if (ok) "[PASS]" else "[FAIL]"
@@ -40,6 +41,23 @@ suppressPackageStartupMessages({
   readr::read_csv(path, col_types = readr::cols(.default = readr::col_character()))
 }
 
+.default_report_files <- function() {
+  list(
+    r1 = "report1_regional_efficiency.csv",
+    r2 = "report2_top_contractors.csv",
+    r3 = "report3_overrun_trends.csv",
+    summary = "summary.json"
+  )
+}
+
+.expected_preview_titles <- function() {
+  c(
+    "Report 1: Regional Flood Mitigation Efficiency",
+    "Report 2: Top Contractors Performance Ranking",
+    "Report 3: Annual Project Type Cost Overrun Trends"
+  )
+}
+
 verify_outputs <- function(dataset, reports, summary, outdir, fmt_opts) {
   if (!dir.exists(outdir)) {
     stop(sprintf("verify_outputs(): outdir '%s' does not exist.", outdir))
@@ -48,6 +66,17 @@ verify_outputs <- function(dataset, reports, summary, outdir, fmt_opts) {
     stop("verify_outputs(): 'reports' must include report1, report2, report3.")
   }
   if (!is.list(summary)) stop("verify_outputs(): 'summary' must be a list.")
+
+  report_files <- if (exists("REPORT_FILES", inherits = TRUE) && is.list(REPORT_FILES)) {
+    REPORT_FILES
+  } else {
+    .default_report_files()
+  }
+
+  path1 <- file.path(outdir, report_files$r1)
+  path2 <- file.path(outdir, report_files$r2)
+  path3 <- file.path(outdir, report_files$r3)
+  path_summary_json <- file.path(outdir, report_files$summary)
 
   report_lines <- c(
     "Verification Report",
@@ -64,16 +93,12 @@ verify_outputs <- function(dataset, reports, summary, outdir, fmt_opts) {
 
   report_lines <- c(report_lines, "Schema & Formatting", "----------------------")
 
-  path1 <- file.path(outdir, REPORT_FILES$r1)
-  path2 <- file.path(outdir, REPORT_FILES$r2)
-  path3 <- file.path(outdir, REPORT_FILES$r3)
-  path_summary_json <- file.path(outdir, REPORT_FILES$summary)
 
   r1_file <- .read_csv_as_character(path1)
   r2_file <- .read_csv_as_character(path2)
   r3_file <- .read_csv_as_character(path3)
 
-
+  expected_r1 <- c("Region", "MainIsland", "TotalApprovedBudget", "MedianSavings", "AvgDelay", "Delay30Rate", "EfficiencyScore")
   expected_r2 <- c("Contractor", "NumProjects", "TotalCost", "AvgDelay", "TotalSavings", "ReliabilityIndex", "RiskFlag")
   expected_r3 <- c("FundingYear", "TypeOfWork", "TotalProjects", "AvgSavings", "OverrunRate", "YoYChange")
 
@@ -81,7 +106,41 @@ verify_outputs <- function(dataset, reports, summary, outdir, fmt_opts) {
   append_check(identical(names(r2_file), expected_r2), "Report 2 header matches expected schema.")
   append_check(identical(names(r3_file), expected_r3), "Report 3 header matches expected schema.")
 
+  append_check(.verify_numeric_format(r1_file$TotalApprovedBudget), "Report 1 monetary fields formatted with commas and 2 decimals.")
+  append_check(.verify_numeric_format(r1_file$MedianSavings), "Report 1 savings column formatted with commas and 2 decimals.")
+  append_check(.verify_numeric_format(r1_file$AvgDelay), "Report 1 average delay formatted to two decimals.")
+  append_check(.verify_numeric_format(r1_file$Delay30Rate), "Report 1 delay rate formatted to two decimals.")
+  append_check(.verify_numeric_format(r1_file$EfficiencyScore), "Report 1 efficiency scores formatted to two decimals.")
 
+  append_check(.verify_integer_format(r2_file$NumProjects), "Report 2 project counts are integers.")
+  append_check(.verify_numeric_format(r2_file$TotalCost), "Report 2 total cost formatted with commas and 2 decimals.")
+  append_check(.verify_numeric_format(r2_file$AvgDelay), "Report 2 average delay formatted to two decimals.")
+  append_check(.verify_numeric_format(r2_file$TotalSavings), "Report 2 total savings formatted with commas and 2 decimals.")
+  append_check(.verify_numeric_format(r2_file$ReliabilityIndex), "Report 2 reliability index formatted to two decimals.")
+
+  append_check(.verify_integer_format(r3_file$TotalProjects), "Report 3 total projects column is integer formatted.")
+  append_check(.verify_numeric_format(r3_file$AvgSavings), "Report 3 average savings formatted to two decimals.")
+  append_check(.verify_numeric_format(r3_file$OverrunRate), "Report 3 overrun rate formatted to two decimals.")
+  append_check(.verify_numeric_format(r3_file$YoYChange), "Report 3 YoY change formatted to two decimals (ignoring blanks).")
+
+  report_lines <- c(report_lines, "", "Sorting & Value Integrity", "---------------------------")
+
+  r1_sorted <- reports$report1 %>% arrange(desc(EfficiencyScore), Region, MainIsland)
+  r2_sorted <- reports$report2 %>% arrange(desc(TotalCost), Contractor)
+  r3_sorted <- reports$report3 %>% arrange(FundingYear, desc(AvgSavings), TypeOfWork)
+
+  append_check(identical(r1_sorted, reports$report1), "Report 1 sorted by EfficiencyScore desc, Region, MainIsland.")
+  append_check(identical(r2_sorted, reports$report2), "Report 2 sorted by TotalCost desc then Contractor.")
+  append_check(identical(r3_sorted, reports$report3), "Report 3 sorted by FundingYear asc then AvgSavings desc.")
+
+  efficiency_ok <- all(is.na(reports$report1$EfficiencyScore) | (reports$report1$EfficiencyScore >= 0 & reports$report1$EfficiencyScore <= 100))
+  delayrate_ok <- all(is.na(reports$report1$Delay30Rate) | (reports$report1$Delay30Rate >= 0 & reports$report1$Delay30Rate <= 100))
+  reliability_ok <- all(is.na(reports$report2$ReliabilityIndex) | (reports$report2$ReliabilityIndex <= 100))
+  overrun_ok <- all(is.na(reports$report3$OverrunRate) | (reports$report3$OverrunRate >= 0 & reports$report3$OverrunRate <= 100))
+
+  append_check(efficiency_ok, "EfficiencyScore within [0,100].")
+  append_check(delayrate_ok, "Delay30Rate within [0,100].")
+  append_check(reliability_ok, "ReliabilityIndex ≤ 100 (negatives allowed).")
   append_check(overrun_ok, "OverrunRate within [0,100].")
 
   risk_flag_expected <- ifelse(is.na(reports$report2$ReliabilityIndex) | reports$report2$ReliabilityIndex < 50, "High Risk", "Low Risk")
@@ -139,6 +198,7 @@ verify_outputs <- function(dataset, reports, summary, outdir, fmt_opts) {
   )
 
 
+
   verification_path <- file.path(outdir, "verification_report.txt")
   readr::write_lines(report_lines, verification_path)
 
@@ -148,4 +208,3 @@ verify_outputs <- function(dataset, reports, summary, outdir, fmt_opts) {
 
   invisible(verification_path)
 }
-
