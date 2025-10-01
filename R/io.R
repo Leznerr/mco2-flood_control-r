@@ -17,11 +17,7 @@ suppressPackageStartupMessages({                             # ensure clean cons
   library(jsonlite)
 })
 
-# ---- Canonical output paths ---------------------------------------------------
-path_report1 <- function(outdir) file.path(outdir, "report1_regional_efficiency.csv")
-path_report2 <- function(outdir) file.path(outdir, "report2_top_contractors.csv")
-path_report3 <- function(outdir) file.path(outdir, "report3_overruns_trend.csv")
-path_summary <- function(outdir) file.path(outdir, "summary.json")
+
 
 # ---- readr write compatibility (pre-2.0 vs >=2.0) ----------------------------
 .readr_has_escape <- function() {
@@ -105,6 +101,7 @@ write_report_csv <- function(df,
   tmp <- tempfile(pattern = paste0(basename(path), "."), tmpdir = dir)
   write_csv_compat(formatted, file = tmp, na = "", col_names = TRUE, delim = ",", progress = FALSE)
   .atomic_replace(tmp, path, "write_report_csv()")
+  invisible(path)
 }
 
 write_summary_json <- function(x, path) {                    # JSON writer with pretty printing
@@ -116,5 +113,33 @@ write_summary_json <- function(x, path) {                    # JSON writer with 
   tmp <- tempfile(pattern = paste0(basename(path), "."), tmpdir = dir)
   jsonlite::write_json(x, tmp, auto_unbox = TRUE, pretty = TRUE, digits = NA, na = "null")
   .atomic_replace(tmp, path, "write_summary_json()")
+  invisible(path)
+}
+
+write_report1 <- function(df, outdir, fmt_opts = list()) {
+  path <- .path_join(outdir, REPORT_FILES$r1)
+  args <- c(list(df = df, path = path), fmt_opts)
+  do.call(write_report_csv, args)
+  path
+}
+
+write_report2 <- function(df, outdir, fmt_opts = list()) {
+  path <- .path_join(outdir, REPORT_FILES$r2)
+  args <- c(list(df = df, path = path), fmt_opts)
+  do.call(write_report_csv, args)
+  path
+}
+
+write_report3 <- function(df, outdir, fmt_opts = list()) {
+  path <- .path_join(outdir, REPORT_FILES$r3)
+  args <- c(list(df = df, path = path), fmt_opts)
+  do.call(write_report_csv, args)
+  path
+}
+
+write_summary_outdir <- function(x, outdir) {
+  path <- .path_join(outdir, REPORT_FILES$summary)
+  write_summary_json(x, path)
+  path
 }
 

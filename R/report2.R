@@ -33,7 +33,7 @@ report_contractor_ranking <- function(df) {                  # build contractor 
         ri <- pmin(pmax(ri, 0), 100)
         ri
       },
-      RiskFlag = dplyr::if_else(is.na(ReliabilityIndex) | ReliabilityIndex < 50, "High Risk", "Low Risk")
+
     ) %>%
     select(Contractor, NumProjects, TotalCost, AvgDelay, TotalSavings, ReliabilityIndex, RiskFlag)
 }

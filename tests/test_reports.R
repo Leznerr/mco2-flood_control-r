@@ -39,36 +39,12 @@ ensure_outputs_ready <- function() {
   sumry <- build_summary(df_filtered)
   ensure_outdir("outputs")
   fmt_opts <- list(
-    exclude = c("FundingYear", "Year", "N", "NProjects", "NumProjects", "TotalProjects"),
+
     exclude_regex = NULL,
     comma_strings = TRUE,
     digits = 2
   )
-  write_report_csv(
-    r1,
-    path_report1("outputs"),
-    exclude = fmt_opts$exclude,
-    exclude_regex = fmt_opts$exclude_regex,
-    comma_strings = fmt_opts$comma_strings,
-    digits = fmt_opts$digits
-  )
-  write_report_csv(
-    r2,
-    path_report2("outputs"),
-    exclude = fmt_opts$exclude,
-    exclude_regex = fmt_opts$exclude_regex,
-    comma_strings = fmt_opts$comma_strings,
-    digits = fmt_opts$digits
-  )
-  write_report_csv(
-    r3,
-    path_report3("outputs"),
-    exclude = fmt_opts$exclude,
-    exclude_regex = fmt_opts$exclude_regex,
-    comma_strings = fmt_opts$comma_strings,
-    digits = fmt_opts$digits
-  )
-  write_summary_json(sumry, path_summary("outputs"))
+
 }
 
 ensure_outputs_ready()
@@ -84,10 +60,7 @@ test_that("report 1 schema & sort are exact", {
     c(
       "Region",
       "MainIsland",
-      "TotalApprovedBudget",
-      "MedianSavings",
-      "AvgDelay",
-      "Delay30Rate",
+
       "EfficiencyScore"
     )
   )

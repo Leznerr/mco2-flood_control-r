@@ -6,9 +6,7 @@
 #              reports (R1,R2,R3) → summary → outputs, with structured logging.
 # Contract   : Run via:
 #                Rscript main.R --input dpwh_flood_control_projects.csv --outdir outputs
-# Outputs    : outputs/report1_regional_efficiency.csv
-#              outputs/report2_top_contractors.csv
-#              outputs/report3_overruns_trend.csv
+
 #              outputs/summary.json
 # Rubric     : Simplicity (clear stages), Correctness (fail-fast, assertions),
 #              Performance (vectorized steps), Readability (formal comments),
@@ -110,42 +108,11 @@ suppressPackageStartupMessages({                            # suppress package b
     build_summary(df)
   })
 
-  f1 <- path_report1(args$outdir)
-  f2 <- path_report2(args$outdir)
-  f3 <- path_report3(args$outdir)
-  fj <- path_summary(args$outdir)
-
   r1_fmt <- do.call(format_dataframe, c(list(r1), fmt_opts))
   r2_fmt <- do.call(format_dataframe, c(list(r2), fmt_opts))
   r3_fmt <- do.call(format_dataframe, c(list(r3), fmt_opts))
 
-  with_log_context(list(stage = "output"), {
-    ensure_outdir(args$outdir)
-    write_report_csv(
-      r1,
-      f1,
-      exclude = fmt_opts$exclude,
-      exclude_regex = fmt_opts$exclude_regex,
-      comma_strings = fmt_opts$comma_strings,
-      digits = fmt_opts$digits
-    )
-    write_report_csv(
-      r2,
-      f2,
-      exclude = fmt_opts$exclude,
-      exclude_regex = fmt_opts$exclude_regex,
-      comma_strings = fmt_opts$comma_strings,
-      digits = fmt_opts$digits
-    )
-    write_report_csv(
-      r3,
-      f3,
-      exclude = fmt_opts$exclude,
-      exclude_regex = fmt_opts$exclude_regex,
-      comma_strings = fmt_opts$comma_strings,
-      digits = fmt_opts$digits
-    )
-    write_summary_json(sumry, fj)
+
   })
 
   with_log_context(list(stage = "verification"), {
@@ -162,8 +129,69 @@ suppressPackageStartupMessages({                            # suppress package b
     raw = list(report1 = r1, report2 = r2, report3 = r3),
     formatted = list(report1 = r1_fmt, report2 = r2_fmt, report3 = r3_fmt),
     summary = sumry,
-    paths = list(report1 = f1, report2 = f2, report3 = f3, summary = fj)
+    paths = paths
   )
+}
+
+.run_interactive_spec <- function(args, fmt_opts) {
+  prep <- NULL
+  repeat {
+    cat("Select Language Implementation:\n")
+    cat("[1] Load the file\n")
+    cat("[2] Generate Reports\n\n")
+    choice <- trimws(readline("Enter choice: "))
+    if (identical(choice, "1")) {
+      prep <- .pipeline_prepare(args)
+      cat(sprintf(
+        "Processing dataset... (%d rows loaded, %d filtered for 2021–2023)\n\n",
+        prep$rows_loaded, prep$rows_filtered
+      ))
+    } else if (identical(choice, "2")) {
+      if (is.null(prep)) {
+        cat("Please load the file first using option 1.\n\n")
+        next
+      }
+      cat("Generating reports...\n")
+      results <- .pipeline_generate_outputs(prep, args, fmt_opts)
+      cat("Outputs saved to individual files…\n\n")
+
+      cat("Report 1: Regional Flood Mitigation Efficiency Summary\n\n")
+      cat("Columns in the final CSV:\n")
+      cat("Region, MainIsland, TotalBudget, MedianSavings, AvgDelay, HighDelayPct, EfficiencyScore\n\n")
+      print(utils::head(results$formatted$report1, 2), row.names = FALSE)
+      cat(sprintf("\n(Full table exported to %s)\n\n", basename(results$paths$report1)))
+
+      cat("Report 2: Top Contractors Performance Ranking\n\n")
+      cat("Columns in the final CSV:\n")
+      cat("Rank, Contractor, TotalCost, NumProjects, AvgDelay, TotalSavings, ReliabilityIndex, RiskFlag\n\n")
+      print(utils::head(results$formatted$report2, 2), row.names = FALSE)
+      cat(sprintf("\n(Full table exported to %s)\n\n", basename(results$paths$report2)))
+
+      cat("Report 3: Annual Project Type Cost Overrun Trends\n\n")
+      cat("Columns in the final CSV:\n")
+      cat("FundingYear, TypeOfWork, TotalProjects, AvgSavings, OverrunRate, YoYChange\n\n")
+      print(utils::head(results$formatted$report3, 2), row.names = FALSE)
+      cat(sprintf("\n(Full table exported to %s)\n\n", basename(results$paths$report3)))
+
+      fmt_summary <- function(x) {
+        if (is.na(x)) "null" else formatC(x, format = "f", digits = 2, big.mark = ",")
+      }
+      summary_json <- sprintf(
+        "{\"global_avg_delay\": %s, \"total_savings\": %s}",
+        fmt_summary(results$summary$global_avg_delay),
+        fmt_summary(results$summary$total_savings)
+      )
+      cat(sprintf("Summary Stats (%s): %s\n\n", basename(results$paths$summary), summary_json))
+
+      back <- trimws(readline("Back to Report Selection (Y/N): "))
+      if (!identical(tolower(back), "y")) {
+        break
+      }
+      cat("\n")
+    } else {
+      cat("Invalid choice. Try again.\n\n")
+    }
+  }
 }
 
 # ------------------------------- Main routine ---------------------------------
@@ -199,50 +227,7 @@ main <- function() {                                         # define primary or
     prep <- .pipeline_prepare(args)
     .pipeline_generate_outputs(prep, args, fmt_opts)
   } else {
-    show_language_menu <- function() {
-      cat("Select language implementation:\n")
-      cat("[1] R\n\n")
-    }
 
-    show_action_menu <- function() {
-      cat("Report Selection Menu:\n")
-      cat("[1] Load dataset\n")
-      cat("[2] Generate reports\n\n")
-    }
-
-    show_language_menu()
-    invisible(readline("Enter choice: "))
-    show_action_menu()
-    invisible(readline("Enter choice: "))
-
-    prep <- .pipeline_prepare(args)
-    cat(sprintf("Processing dataset... (%d rows loaded, %d filtered for 2021–2023)\n",
-                prep$rows_loaded, prep$rows_filtered))
-
-    cat("\n")
-    show_action_menu()
-    invisible(readline("Enter choice: "))
-    cat("\nGenerating reports...\n")
-    results <- .pipeline_generate_outputs(prep, args, fmt_opts)
-    cat("Outputs saved to individual files...\n\n")
-
-    preview <- function(title, df_fmt, path) {
-      cat(sprintf("%s\n", title))
-      if (nrow(df_fmt) == 0) {
-        cat("[No rows]\n")
-      } else {
-        print(utils::head(df_fmt, 3), row.names = FALSE)
-      }
-      cat(sprintf("(Full table exported to %s)\n\n", basename(path)))
-    }
-
-    preview("Report 1 — Regional Flood Mitigation Efficiency", results$formatted$report1, results$paths$report1)
-    preview("Report 2 — Top Contractors Performance Ranking", results$formatted$report2, results$paths$report2)
-    preview("Report 3 — Annual Project Type Cost Overrun Trends", results$formatted$report3, results$paths$report3)
-
-    summary_json <- jsonlite::toJSON(results$summary, auto_unbox = TRUE, na = "null")
-    cat(sprintf("Summary Stats (summary.json): %s\n\n", summary_json))
-    invisible(readline("Back to Report Selection (Y/N): "))
   }
 
   # ---- Epilogue & duration ----------------------------------------------------

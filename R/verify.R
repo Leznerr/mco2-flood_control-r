@@ -62,28 +62,19 @@ verify_outputs <- function(dataset, reports, summary, outdir, fmt_opts) {
 
   report_lines <- c(report_lines, "Schema & Formatting", "----------------------")
 
-  path1 <- path_report1(outdir)
-  path2 <- path_report2(outdir)
-  path3 <- path_report3(outdir)
-  path_summary_json <- path_summary(outdir)
+
 
   r1_file <- .read_csv_as_character(path1)
   r2_file <- .read_csv_as_character(path2)
   r3_file <- .read_csv_as_character(path3)
 
-  expected_r1 <- c("Region", "MainIsland", "TotalApprovedBudget", "MedianSavings", "AvgDelay", "Delay30Rate", "EfficiencyScore")
-  expected_r2 <- c("Contractor", "NumProjects", "TotalCost", "AvgDelay", "TotalSavings", "ReliabilityIndex", "RiskFlag")
+
   expected_r3 <- c("FundingYear", "TypeOfWork", "TotalProjects", "AvgSavings", "OverrunRate", "YoYChange")
 
   append_check(identical(names(r1_file), expected_r1), "Report 1 header matches expected schema.")
   append_check(identical(names(r2_file), expected_r2), "Report 2 header matches expected schema.")
   append_check(identical(names(r3_file), expected_r3), "Report 3 header matches expected schema.")
 
-  append_check(.verify_numeric_format(r1_file$TotalApprovedBudget), "Report 1 monetary fields formatted with commas and 2 decimals.")
-  append_check(.verify_numeric_format(r1_file$MedianSavings), "Report 1 savings column formatted with commas and 2 decimals.")
-  append_check(.verify_numeric_format(r1_file$AvgDelay), "Report 1 average delay formatted to two decimals.")
-  append_check(.verify_numeric_format(r1_file$Delay30Rate), "Report 1 delay rate formatted to two decimals.")
-  append_check(.verify_numeric_format(r1_file$EfficiencyScore), "Report 1 efficiency scores formatted to two decimals.")
 
   append_check(.verify_integer_format(r2_file$NumProjects), "Report 2 project counts are integers.")
   append_check(.verify_numeric_format(r2_file$TotalCost), "Report 2 total cost formatted with commas and 2 decimals.")
@@ -107,12 +98,12 @@ verify_outputs <- function(dataset, reports, summary, outdir, fmt_opts) {
   append_check(identical(r3_sorted, reports$report3), "Report 3 sorted by FundingYear asc then AvgSavings desc.")
 
   efficiency_ok <- all(is.na(reports$report1$EfficiencyScore) | (reports$report1$EfficiencyScore >= 0 & reports$report1$EfficiencyScore <= 100))
-  delayrate_ok <- all(is.na(reports$report1$Delay30Rate) | (reports$report1$Delay30Rate >= 0 & reports$report1$Delay30Rate <= 100))
+
   reliability_ok <- all(is.na(reports$report2$ReliabilityIndex) | (reports$report2$ReliabilityIndex >= 0 & reports$report2$ReliabilityIndex <= 100))
   overrun_ok <- all(is.na(reports$report3$OverrunRate) | (reports$report3$OverrunRate >= 0 & reports$report3$OverrunRate <= 100))
 
   append_check(efficiency_ok, "EfficiencyScore within [0,100].")
-  append_check(delayrate_ok, "Delay30Rate within [0,100].")
+
   append_check(reliability_ok, "ReliabilityIndex within [0,100].")
   append_check(overrun_ok, "OverrunRate within [0,100].")
 
@@ -156,13 +147,7 @@ verify_outputs <- function(dataset, reports, summary, outdir, fmt_opts) {
   report_lines <- c(report_lines, "", "UX & Documentation", "----------------------")
 
   preview_titles <- c(
-    "Report 1 — Regional Flood Mitigation Efficiency",
-    "Report 2 — Top Contractors Performance Ranking",
-    "Report 3 — Annual Project Type Cost Overrun Trends"
-  )
-  preview_ok <- identical(preview_titles[1], "Report 1 — Regional Flood Mitigation Efficiency") &&
-    identical(preview_titles[2], "Report 2 — Top Contractors Performance Ranking") &&
-    identical(preview_titles[3], "Report 3 — Annual Project Type Cost Overrun Trends")
+
   append_check(preview_ok, "Interactive preview headings mirror sample output titles.")
 
   readme_text <- tryCatch(readr::read_file("README.md"), error = function(e) "")

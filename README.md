@@ -35,9 +35,7 @@ Rscript main.R --input dpwh_flood_control_projects.csv --outdir outputs
 
 Key outputs (written to `--outdir`, defaults to `outputs/`):
 
-- `report1_regional_efficiency.csv` – Regional Flood Mitigation Efficiency
-- `report2_top_contractors.csv` – Top Contractors Performance Ranking
-- `report3_overruns_trend.csv` – Annual Project Type Cost Overrun Trends
+
 - `summary.json` – Global scalar metrics
 - `verification_report.txt` – Pass/fail log covering schema, formatting, sorting, derived-field consistency, summary parity, and rubric alignment checks.
 
@@ -45,11 +43,7 @@ All reports use UTF-8 CSV with comma thousands separators and two decimal places
 
 ## Output Schemas
 
-- **Report 1 – Regional Flood Mitigation Efficiency**
-  - Columns: `Region`, `MainIsland`, `TotalApprovedBudget`, `MedianSavings`, `AvgDelay`, `Delay30Rate`, `EfficiencyScore`
-  - Sorted by `EfficiencyScore` descending, then `Region`, `MainIsland`
-- **Report 2 – Top Contractors Performance Ranking**
-  - Columns: `Contractor`, `NumProjects`, `TotalCost`, `AvgDelay`, `TotalSavings`, `ReliabilityIndex`, `RiskFlag`
+
   - Includes contractors with ≥5 projects, top 15 by `TotalCost`
 - **Report 3 – Annual Project Type Cost Overrun Trends**
   - Columns: `FundingYear`, `TypeOfWork`, `TotalProjects`, `AvgSavings`, `OverrunRate`, `YoYChange`
@@ -57,7 +51,7 @@ All reports use UTF-8 CSV with comma thousands separators and two decimal places
 - **summary.json**
   - Keys: `total_projects`, `total_contractors`, `total_provinces`, `global_avg_delay`, `total_savings`
 
-The CLI also offers an interactive preview flow mirroring the provided sample output (menu prompts, three-row table snippets, and "exported to …" confirmations).
+
 
 ## Tests
 
