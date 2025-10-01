@@ -36,23 +36,6 @@ Rscript main.R --input dpwh_flood_control_projects.csv --outdir outputs
 Key outputs (written to `--outdir`, defaults to `outputs/`):
 
 
-- `summary.json` – Global scalar metrics
-- `verification_report.txt` – Pass/fail log covering schema, formatting, sorting, derived-field consistency, summary parity, and rubric alignment checks.
-
-All reports use UTF-8 CSV with comma thousands separators and two decimal places on monetary/ratio columns, matching the course specification.
-
-## Output Schemas
-
-
-  - Includes contractors with ≥5 projects, top 15 by `TotalCost`
-- **Report 3 – Annual Project Type Cost Overrun Trends**
-  - Columns: `FundingYear`, `TypeOfWork`, `TotalProjects`, `AvgSavings`, `OverrunRate`, `YoYChange`
-  - Sorted by `FundingYear` ascending, `AvgSavings` descending, `TypeOfWork`
-- **summary.json**
-  - Keys: `total_projects`, `total_contractors`, `total_provinces`, `global_avg_delay`, `total_savings`
-
-
-
 ## Tests
 
 Run the automated unit and golden tests:

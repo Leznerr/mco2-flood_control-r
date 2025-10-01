@@ -3,8 +3,7 @@
 # Purpose   : Produce the Top Contractors Performance Ranking report.
 # Contract  : report_contractor_ranking(df) -> tibble with columns
 #   Contractor, NumProjects, TotalCost, AvgDelay, TotalSavings,
-#   ReliabilityIndex, RiskFlag. Keeps contractors with ≥5 projects, ranks top 15
-#   by TotalCost (descending).
+
 # ------------------------------------------------------------------------------
 
 suppressPackageStartupMessages({                             # quiet load

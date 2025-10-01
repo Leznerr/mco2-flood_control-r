@@ -76,6 +76,7 @@ verify_outputs <- function(dataset, reports, summary, outdir, fmt_opts) {
   append_check(identical(names(r3_file), expected_r3), "Report 3 header matches expected schema.")
 
 
+
   append_check(.verify_integer_format(r2_file$NumProjects), "Report 2 project counts are integers.")
   append_check(.verify_numeric_format(r2_file$TotalCost), "Report 2 total cost formatted with commas and 2 decimals.")
   append_check(.verify_numeric_format(r2_file$AvgDelay), "Report 2 average delay formatted to two decimals.")
