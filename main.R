@@ -6,9 +6,9 @@
 #              reports (R1,R2,R3) → summary → outputs, with structured logging.
 # Contract   : Run via:
 #                Rscript main.R --input dpwh_flood_control_projects.csv --outdir outputs
-# Outputs    : outputs/report1_regional_summary.csv
-#              outputs/report2_contractor_ranking.csv
-#              outputs/report3_annual_trends.csv
+# Outputs    : outputs/report1_regional_efficiency.csv
+#              outputs/report2_top_contractors.csv
+#              outputs/report3_overruns_trend.csv
 #              outputs/summary.json
 # Rubric     : Simplicity (clear stages), Correctness (fail-fast, assertions),
 #              Performance (vectorized steps), Readability (formal comments),
@@ -17,7 +17,6 @@
 # ------------------------------------------------------------------------------
 
 # ------------------------------- Strict options --------------------------------
-options(warn = 2)                                           # treat warnings as errors to surface issues early
 options(stringsAsFactors = FALSE)                           # keep character columns as character by default
 
 # ------------------------------- Dependencies ---------------------------------
@@ -37,6 +36,7 @@ suppressPackageStartupMessages({                            # suppress package b
 .source_or_die("R/utils_log.R")                              # log_* API (INFO/WARN/ERROR + context helpers)
 .source_or_die("R/utils_cli.R")                              # build_cli(), validate_cli_args(), normalize_cli_paths()
 .source_or_die("R/utils_format.R")                           # safe_mean/median, minmax_0_100, format_dataframe()
+.source_or_die("R/constants.R")                               # shared interactive/verification literals
 .source_or_die("R/io.R")                                     # ensure_outdir(), write_report_csv(), write_summary_json()
 
 # Source pipeline stage modules -------------------------------------------------
@@ -48,19 +48,13 @@ suppressPackageStartupMessages({                            # suppress package b
 .source_or_die("R/report2.R")                                # report_contractor_ranking()
 .source_or_die("R/report3.R")                                # report_overrun_trends()
 .source_or_die("R/summary.R")                                # build_summary()
+.source_or_die("R/verify.R")                                 # verify_outputs()
 
 # --------------------------- Pipeline helper stages ---------------------------
-.pipeline_prepare <- function(args) {
-  rows_loaded <- 0L
-  rows_filtered <- 0L
-  raw <- NULL
-  cleaned <- NULL
-  derived <- NULL
-  filtered <- NULL
 
-  with_log_context(list(stage = "ingest"), {
-    raw <<- ingest_csv(args$input)
-    rows_loaded <<- nrow(raw)
+.pipeline_prepare <- function(args) {
+  ingest_result <- with_log_context(list(stage = "ingest"), {
+    raw <- ingest_csv(args$input)
     log_info(
       "diagnostic: class(raw)=%s; nrow=%s; names[1:5]=%s",
       paste(class(raw), collapse = "/"),
@@ -68,30 +62,34 @@ suppressPackageStartupMessages({                            # suppress package b
       paste(utils::head(names(raw), 5), collapse = ",")
     )
     stopifnot(is.data.frame(raw), nrow(raw) > 0)
+    list(data = raw, rows_loaded = nrow(raw))
   })
+
+  raw <- ingest_result$data
+  rows_loaded <- ingest_result$rows_loaded
 
   with_log_context(list(stage = "validate"), {
     validate_schema(raw)
   })
 
-  with_log_context(list(stage = "clean"), {
-    cleaned <<- clean_all(raw)
+  cleaned <- with_log_context(list(stage = "clean"), {
+    clean_all(raw)
   })
 
-  with_log_context(list(stage = "derive"), {
-    derived <<- derive_fields(cleaned)
+  derived <- with_log_context(list(stage = "derive"), {
+    derive_fields(cleaned)
   })
 
-  with_log_context(list(stage = "filter"), {
-    filtered <<- filter_years(derived, years = 2021:2023)
+  filter_result <- with_log_context(list(stage = "filter"), {
+    filtered <- filter_years(derived, years = 2021:2023)
     assert_year_filter(filtered, allowed_years = 2021:2023)
-    rows_filtered <<- nrow(filtered)
+    list(data = filtered, rows_filtered = nrow(filtered))
   })
 
   list(
-    data = filtered,
+    data = filter_result$data,
     rows_loaded = rows_loaded,
-    rows_filtered = rows_filtered
+    rows_filtered = filter_result$rows_filtered
   )
 }
 
@@ -99,50 +97,154 @@ suppressPackageStartupMessages({                            # suppress package b
   df <- prep$data
   if (is.null(df)) stop("pipeline_generate_outputs(): filtered dataset missing.")
 
-  r1 <- NULL
-  r2 <- NULL
-  r3 <- NULL
-  sumry <- NULL
-
-  with_log_context(list(stage = "report1"), {
-    r1 <<- report_regional_efficiency(df)
+  r1 <- with_log_context(list(stage = "report1"), {
+    report_regional_efficiency(df)
   })
-  with_log_context(list(stage = "report2"), {
-    r2 <<- report_contractor_ranking(df)
+  r2 <- with_log_context(list(stage = "report2"), {
+    report_contractor_ranking(df)
   })
-  with_log_context(list(stage = "report3"), {
-    r3 <<- report_overrun_trends(df)
+  r3 <- with_log_context(list(stage = "report3"), {
+    report_overrun_trends(df)
   })
-  with_log_context(list(stage = "summary"), {
-    sumry <<- build_summary(df)
+  sumry <- with_log_context(list(stage = "summary"), {
+    build_summary(df)
   })
-
-  f1 <- path_report1(args$outdir)
-  f2 <- path_report2(args$outdir)
-  f3 <- path_report3(args$outdir)
-  fj <- path_summary(args$outdir)
 
   r1_fmt <- do.call(format_dataframe, c(list(r1), fmt_opts))
   r2_fmt <- do.call(format_dataframe, c(list(r2), fmt_opts))
   r3_fmt <- do.call(format_dataframe, c(list(r3), fmt_opts))
 
-  with_log_context(list(stage = "output"), {
-    ensure_outdir(args$outdir)
-    write_report_csv(r1_fmt, f1, exclude = fmt_opts$exclude, exclude_regex = fmt_opts$exclude_regex)
-    write_report_csv(r2_fmt, f2, exclude = fmt_opts$exclude, exclude_regex = fmt_opts$exclude_regex)
-    write_report_csv(r3_fmt, f3, exclude = fmt_opts$exclude, exclude_regex = fmt_opts$exclude_regex)
-    write_summary_json(sumry, fj)
+  paths <- with_log_context(list(stage = "output"), {
+    list(
+      report1 = write_report1(r1, args$outdir, fmt_opts),
+      report2 = write_report2(r2, args$outdir, fmt_opts),
+      report3 = write_report3(r3, args$outdir, fmt_opts),
+      summary = write_summary_outdir(sumry, args$outdir)
+    )
+  })
+
+  with_log_context(list(stage = "verification"), {
+    verify_outputs(
+      dataset = df,
+      reports = list(report1 = r1, report2 = r2, report3 = r3),
+      summary = sumry,
+      outdir = args$outdir,
+      fmt_opts = fmt_opts
+    )
   })
 
   list(
+    raw = list(report1 = r1, report2 = r2, report3 = r3),
     formatted = list(report1 = r1_fmt, report2 = r2_fmt, report3 = r3_fmt),
     summary = sumry,
-    paths = list(report1 = f1, report2 = f2, report3 = f3, summary = fj)
+    paths = paths
   )
 }
 
+.run_interactive_spec <- function(args, fmt_opts) {
+  prep <- NULL
+  print_preview_table <- function(df, n = 2) {
+    if (!is.data.frame(df)) {
+      stop("print_preview_table(): 'df' must be a data frame.")
+    }
+    preview <- utils::head(df, n)
+    if (nrow(preview) == 0) {
+      cat("(no rows)\n\n")
+      return(invisible(NULL))
+    }
+    preview_df <- as.data.frame(preview, stringsAsFactors = FALSE)
+    preview_df[] <- lapply(preview_df, function(col) {
+      val <- as.character(col)
+      val[is.na(val)] <- ""
+      val
+    })
+    header <- paste(colnames(preview_df), collapse = " | ")
+    cat("| ", header, " |\n", sep = "")
+    cat("| ", paste(rep("---", ncol(preview_df)), collapse = " | "), " |\n", sep = "")
+    for (i in seq_len(nrow(preview_df))) {
+      row_vals <- vapply(preview_df[i, , drop = FALSE], as.character, character(1), USE.NAMES = FALSE)
+      row_vals[row_vals == "NA"] <- ""
+      cat("| ", paste(row_vals, collapse = " | "), " |\n", sep = "")
+    }
+    cat("\n")
+    invisible(NULL)
+  }
+  format_summary_preview <- function(summary_list) {
+    fmt_int <- function(x) {
+      if (is.na(x)) "null" else formatC(as.integer(round(x)), format = "d")
+    }
+    fmt_num <- function(x) {
+      if (is.na(x)) {
+        "null"
+      } else {
+        formatC(round(x, 2), format = "f", digits = 2, big.mark = "", drop0trailing = FALSE)
+      }
+    }
+    sprintf(
+      "{\"total_projects\": %s, \"total_contractors\": %s, \"total_provinces\": %s, \"global_avg_delay\": %s, \"total_savings\": %s}",
+      fmt_int(summary_list$total_projects),
+      fmt_int(summary_list$total_contractors),
+      fmt_int(summary_list$total_provinces),
+      fmt_num(summary_list$global_avg_delay),
+      fmt_num(summary_list$total_savings)
+    )
+  }
+  repeat {
+    cat(INTERACTIVE_MENU_TITLE, "\n", sep = "")
+    for (line in INTERACTIVE_MENU_OPTIONS) {
+      cat(line, "\n", sep = "")
+    }
+    cat("\n")
+    choice <- trimws(readline("Enter choice: "))
+    if (identical(choice, "1")) {
+      prep <- .pipeline_prepare(args)
+      cat(sprintf(
+        "Processing dataset... (%d rows loaded, %d filtered for 2021–2023)\n\n",
+        prep$rows_loaded, prep$rows_filtered
+      ))
+    } else if (identical(choice, "2")) {
+      if (is.null(prep)) {
+        cat("Please load the file first using option 1.\n\n")
+        next
+      }
+      cat("Generating reports...\n")
+      results <- .pipeline_generate_outputs(prep, args, fmt_opts)
+      cat("Outputs saved to individual files...\n\n")
+
+      cat(INTERACTIVE_REPORT_HEADINGS[1], "\n\n", sep = "")
+      cat("Columns in the final CSV:\n")
+      cat(INTERACTIVE_REPORT_COLUMNS$report1, "\n\n", sep = "")
+      print_preview_table(results$formatted$report1)
+      cat(sprintf("(Full table exported to %s)\n\n", basename(results$paths$report1)))
+
+      cat(INTERACTIVE_REPORT_HEADINGS[2], "\n\n", sep = "")
+      cat("Columns in the final CSV:\n")
+      cat(INTERACTIVE_REPORT_COLUMNS$report2, "\n\n", sep = "")
+      print_preview_table(results$formatted$report2)
+      cat(sprintf("(Full table exported to %s)\n\n", basename(results$paths$report2)))
+
+      cat(INTERACTIVE_REPORT_HEADINGS[3], "\n\n", sep = "")
+      cat("Columns in the final CSV:\n")
+      cat(INTERACTIVE_REPORT_COLUMNS$report3, "\n\n", sep = "")
+      print_preview_table(results$formatted$report3)
+      cat(sprintf("(Full table exported to %s)\n\n", basename(results$paths$report3)))
+
+      summary_json <- format_summary_preview(results$summary)
+      cat(sprintf("Summary Stats (%s): %s\n\n", SUMMARY_FILENAME_LABEL, summary_json))
+
+      back <- trimws(readline("Back to Report Selection (Y/N): "))
+      if (!identical(tolower(back), "y")) {
+        break
+      }
+      cat("\n")
+    } else {
+      cat("Invalid choice. Try again.\n\n")
+    }
+  }
+}
+
 # ------------------------------- Main routine ---------------------------------
-main <- function() {                                         # define primary orchestration function
+.pipeline_main <- function() {                               # define primary orchestration function
   start_time <- Sys.time()                                   # capture start timestamp for duration logging
 
   # ---- CLI parse & normalize --------------------------------------------------
@@ -162,7 +264,9 @@ main <- function() {                                         # define primary or
   log_info("Output dir: %s", args$outdir)                    # log the resolved output directory
 
   fmt_opts <- list(
-    exclude = c("FundingYear", "Year", "N", "NProjects", "NumProjects", "Rank"),
+    exclude = c(
+      "FundingYear", "Year", "N", "NProjects", "NumProjects", "TotalProjects"
+    ),
     comma_strings = TRUE,
     digits = 2,
     exclude_regex = NULL
@@ -172,42 +276,7 @@ main <- function() {                                         # define primary or
     prep <- .pipeline_prepare(args)
     .pipeline_generate_outputs(prep, args, fmt_opts)
   } else {
-    show_menu <- function() {
-      cat("Select Language Implementation:\n")
-      cat("[1] Load the file\n")
-      cat("[2] Generate Reports\n\n")
-    }
-
-    show_menu()
-    invisible(readline("Enter choice: "))
-    prep <- .pipeline_prepare(args)
-    cat(sprintf("Processing dataset... (%d rows loaded, %d filtered for 2021–2023)\n",
-                prep$rows_loaded, prep$rows_filtered))
-
-    cat("\n")
-    show_menu()
-    invisible(readline("Enter choice: "))
-    cat("\nGenerating reports...\n")
-    results <- .pipeline_generate_outputs(prep, args, fmt_opts)
-    cat("Outputs saved to individual files...\n\n")
-
-    preview <- function(title, df_fmt, path) {
-      cat(sprintf("%s\n", title))
-      if (nrow(df_fmt) == 0) {
-        cat("[No rows]\n")
-      } else {
-        print(utils::head(df_fmt, 3), row.names = FALSE)
-      }
-      cat(sprintf("(Full table exported to %s)\n\n", basename(path)))
-    }
-
-    preview("Report 1 — Regional Flood Mitigation Efficiency Summary", results$formatted$report1, results$paths$report1)
-    preview("Report 2 — Top Contractors Performance Ranking", results$formatted$report2, results$paths$report2)
-    preview("Report 3 — Annual Project Type Cost Overrun Trends", results$formatted$report3, results$paths$report3)
-
-    summary_json <- jsonlite::toJSON(results$summary, auto_unbox = TRUE, na = "null")
-    cat(sprintf("Summary Stats (summary.json): %s\n\n", summary_json))
-    invisible(readline("Back to Report Selection (Y/N): "))
+    .run_interactive_spec(args, fmt_opts)
   }
 
   # ---- Epilogue & duration ----------------------------------------------------
@@ -217,10 +286,17 @@ main <- function() {                                         # define primary or
   invisible(TRUE)                                            # return invisibly for CLI usage
 }
 
+# Retain historical `main()` alias for compatibility with previous automation.
+main <- .pipeline_main
+
+if (!exists(".pipeline_main", mode = "function")) {
+  stop("main.R: pipeline entrypoint failed to load; check earlier errors during sourcing.")
+}
+
 # ------------------------------- Safe execution --------------------------------
 tryCatch(                                                # wrap execution to surface errors with non-zero exit
   {
-    main()                                               # invoke main orchestration function
+    .pipeline_main()                                    # invoke main orchestration function
   },
   error = function(e) {                                  # handle any error thrown during pipeline execution
     msg <- conditionMessage(e)
