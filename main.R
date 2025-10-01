@@ -6,9 +6,7 @@
 #              reports (R1,R2,R3) → summary → outputs, with structured logging.
 # Contract   : Run via:
 #                Rscript main.R --input dpwh_flood_control_projects.csv --outdir outputs
-# Outputs    : outputs/report1_regional_summary.csv
-#              outputs/report2_contractor_ranking.csv
-#              outputs/report3_annual_trends.csv
+
 #              outputs/summary.json
 # Rubric     : Simplicity (clear stages), Correctness (fail-fast, assertions),
 #              Performance (vectorized steps), Readability (formal comments),
@@ -114,13 +112,7 @@ suppressPackageStartupMessages({                            # suppress package b
   r2_fmt <- do.call(format_dataframe, c(list(r2), fmt_opts))
   r3_fmt <- do.call(format_dataframe, c(list(r3), fmt_opts))
 
-  paths <- with_log_context(list(stage = "output"), {
-    list(
-      report1 = write_report1(r1, args$outdir, fmt_opts),
-      report2 = write_report2(r2, args$outdir, fmt_opts),
-      report3 = write_report3(r3, args$outdir, fmt_opts),
-      summary = write_summary_outdir(sumry, args$outdir)
-    )
+
   })
 
   with_log_context(list(stage = "verification"), {
@@ -235,7 +227,7 @@ main <- function() {                                         # define primary or
     prep <- .pipeline_prepare(args)
     .pipeline_generate_outputs(prep, args, fmt_opts)
   } else {
-    .run_interactive_spec(args, fmt_opts)
+
   }
 
   # ---- Epilogue & duration ----------------------------------------------------

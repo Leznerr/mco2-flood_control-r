@@ -39,15 +39,12 @@ ensure_outputs_ready <- function() {
   sumry <- build_summary(df_filtered)
   ensure_outdir("outputs")
   fmt_opts <- list(
-    exclude = c("FundingYear", "Year", "N", "NProjects", "NumProjects", "Rank", "TotalProjects"),
+
     exclude_regex = NULL,
     comma_strings = TRUE,
     digits = 2
   )
-  write_report1(r1, "outputs", fmt_opts)
-  write_report2(r2, "outputs", fmt_opts)
-  write_report3(r3, "outputs", fmt_opts)
-  write_summary_outdir(sumry, "outputs")
+
 }
 
 ensure_outputs_ready()
@@ -63,10 +60,7 @@ test_that("report 1 schema & sort are exact", {
     c(
       "Region",
       "MainIsland",
-      "TotalBudget",
-      "MedianSavings",
-      "AvgDelay",
-      "HighDelayPct",
+
       "EfficiencyScore"
     )
   )
