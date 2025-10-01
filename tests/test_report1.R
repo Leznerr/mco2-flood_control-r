@@ -26,7 +26,18 @@ test_that("report 1 computes efficiency metrics within bounds", {
     CompletionDelayDays = c(20, 120)
   )
   report <- report_regional_efficiency(df)
-  expect_equal(colnames(report), c("Region", "MainIsland", "TotalBudget", "MedianSavings", "AvgDelay", "HighDelayPct", "EfficiencyScore"))
+  expect_equal(
+    colnames(report),
+    c(
+      "Region",
+      "MainIsland",
+      "TotalBudget",
+      "MedianSavings",
+      "AvgDelay",
+      "HighDelayPct",
+      "EfficiencyScore"
+    )
+  )
   expect_true(all(report$EfficiencyScore >= 0 & report$EfficiencyScore <= 100, na.rm = TRUE))
   expect_equal(report$Region[1], "Region A")
   expect_equal(report$HighDelayPct, c(0, 100))

@@ -39,14 +39,15 @@ ensure_outputs_ready <- function() {
   sumry <- build_summary(df_filtered)
   ensure_outdir("outputs")
   fmt_opts <- list(
-    exclude = c("FundingYear", "Year", "N", "NProjects", "NumProjects", "Rank"),
+    exclude = c("FundingYear", "Year", "N", "NProjects", "NumProjects", "Rank", "TotalProjects"),
+    exclude_regex = NULL,
     comma_strings = TRUE,
     digits = 2
   )
-  write_report_csv(do.call(format_dataframe, c(list(r1), fmt_opts)), path_report1("outputs"))
-  write_report_csv(do.call(format_dataframe, c(list(r2), fmt_opts)), path_report2("outputs"))
-  write_report_csv(do.call(format_dataframe, c(list(r3), fmt_opts)), path_report3("outputs"))
-  write_summary_json(sumry, path_summary("outputs"))
+  write_report1(r1, "outputs", fmt_opts)
+  write_report2(r2, "outputs", fmt_opts)
+  write_report3(r3, "outputs", fmt_opts)
+  write_summary_outdir(sumry, "outputs")
 }
 
 ensure_outputs_ready()
@@ -57,7 +58,18 @@ locale_comma <- readr::locale(grouping_mark = ",")
 
 test_that("report 1 schema & sort are exact", {
   r1 <- readr::read_csv(path_report1("outputs"), show_col_types = FALSE, locale = locale_comma)
-  expect_identical(names(r1), c("Region", "MainIsland", "TotalBudget", "MedianSavings", "AvgDelay", "HighDelayPct", "EfficiencyScore"))
+  expect_identical(
+    names(r1),
+    c(
+      "Region",
+      "MainIsland",
+      "TotalBudget",
+      "MedianSavings",
+      "AvgDelay",
+      "HighDelayPct",
+      "EfficiencyScore"
+    )
+  )
   expect_true(!is.unsorted(-r1$EfficiencyScore))
 })
 

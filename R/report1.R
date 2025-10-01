@@ -15,24 +15,38 @@ suppressPackageStartupMessages({                             # quiet load for CL
 
 report_regional_efficiency <- function(df) {                 # build report 1 summary
   if (!is.data.frame(df)) stop("report_regional_efficiency(): 'df' must be a data frame.")
-  df %>%
+  reg_summ <- df %>%
     group_by(Region, MainIsland) %>%
     summarise(
-      TotalBudget = safe_sum(ApprovedBudgetForContract),
+      TotalApprovedBudget = safe_sum(ApprovedBudgetForContract),
       MedianSavings = safe_median(CostSavings),
       AvgDelay = safe_mean(CompletionDelayDays),
-      HighDelayPct = 100 * safe_mean(CompletionDelayDays > 30),
-      EfficiencyRaw = dplyr::if_else(
-        !is.na(MedianSavings) & !is.na(AvgDelay) & AvgDelay > 0,
-        (MedianSavings / AvgDelay) * 100,
-        NA_real_
-      ),
+      Delay30Rate = 100 * safe_mean(CompletionDelayDays > 30),
+      EfficiencyRaw = {
+        adj_delay <- dplyr::case_when(
+          is.na(AvgDelay) ~ NA_real_,
+          abs(AvgDelay) < 1e-6 ~ dplyr::if_else(AvgDelay < 0, -1e-6, 1e-6),
+          TRUE ~ AvgDelay
+        )
+        ifelse(!is.na(MedianSavings) & !is.na(adj_delay), (MedianSavings / adj_delay) * 100, NA_real_)
+      },
       .groups = "drop"
     ) %>%
     mutate(
-      EfficiencyScore = pmax(0, pmin(100, minmax_0_100(EfficiencyRaw)))
+      EfficiencyScore = minmax_0_100(EfficiencyRaw)
     ) %>%
-    select(Region, MainIsland, TotalBudget, MedianSavings, AvgDelay, HighDelayPct, EfficiencyScore) %>%
+    select(Region, MainIsland, TotalApprovedBudget, MedianSavings, AvgDelay, Delay30Rate, EfficiencyScore) %>%
     arrange(desc(EfficiencyScore), Region, MainIsland)
+
+  dplyr::transmute(
+    reg_summ,
+    Region,
+    MainIsland,
+    TotalBudget = TotalApprovedBudget,
+    MedianSavings,
+    AvgDelay,
+    HighDelayPct = Delay30Rate,
+    EfficiencyScore
+  )
 }
 

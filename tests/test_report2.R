@@ -38,12 +38,24 @@ test_that("report 2 enforces eligibility and ranking rules", {
   contractors <- append(contractors, list(make_contractor("Short Firm", n = 4)))
   df <- dplyr::bind_rows(contractors)
   report <- report_contractor_ranking(df)
-  expect_equal(colnames(report), c("Rank", "Contractor", "TotalCost", "NumProjects", "AvgDelay", "TotalSavings", "ReliabilityIndex", "RiskFlag"))
+  expect_equal(
+    colnames(report),
+    c(
+      "Rank",
+      "Contractor",
+      "TotalCost",
+      "NumProjects",
+      "AvgDelay",
+      "TotalSavings",
+      "ReliabilityIndex",
+      "RiskFlag"
+    )
+  )
   expect_lte(nrow(report), 15)
   expect_false("Short Firm" %in% report$Contractor)
   risk <- report[report$Contractor == "Contractor 01", "RiskFlag", drop = TRUE]
   expect_equal(risk, "High Risk")
-  expect_true(all(report$Rank == seq_len(nrow(report))))
+  expect_true(!is.unsorted(-report$TotalCost))
 })
 
 test_that("report 2 applies the NumProjects threshold correctly", {

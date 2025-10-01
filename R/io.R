@@ -17,11 +17,29 @@ suppressPackageStartupMessages({                             # ensure clean cons
   library(jsonlite)
 })
 
-# ---- Canonical output paths ---------------------------------------------------
-path_report1 <- function(outdir) file.path(outdir, "report1_regional_summary.csv")
-path_report2 <- function(outdir) file.path(outdir, "report2_contractor_ranking.csv")
-path_report3 <- function(outdir) file.path(outdir, "report3_annual_trends.csv")
-path_summary <- function(outdir) file.path(outdir, "summary.json")
+# ---- Canonical output filenames -----------------------------------------------
+REPORT_FILES <- list(
+  r1 = "report1_regional_summary.csv",
+  r2 = "report2_contractor_ranking.csv",
+  r3 = "report3_annual_trends.csv",
+  summary = "summary.json"
+)
+
+path_report1 <- function(outdir) file.path(outdir, REPORT_FILES$r1)
+path_report2 <- function(outdir) file.path(outdir, REPORT_FILES$r2)
+path_report3 <- function(outdir) file.path(outdir, REPORT_FILES$r3)
+path_summary <- function(outdir) file.path(outdir, REPORT_FILES$summary)
+
+.path_join <- function(outdir, fname) {
+  if (missing(outdir) || !is.character(outdir) || length(outdir) != 1L || is.na(outdir)) {
+    stop(".path_join(): 'outdir' must be a non-NA character scalar.")
+  }
+  if (missing(fname) || !is.character(fname) || length(fname) != 1L || is.na(fname)) {
+    stop(".path_join(): 'fname' must be a non-NA character scalar.")
+  }
+  if (!dir.exists(outdir)) dir.create(outdir, recursive = TRUE, showWarnings = FALSE)
+  file.path(outdir, fname)
+}
 
 # ---- readr write compatibility (pre-2.0 vs >=2.0) ----------------------------
 .readr_has_escape <- function() {
@@ -83,17 +101,29 @@ ensure_outdir <- function(path) {                            # create directory 
   invisible(path)
 }
 
-write_report_csv <- function(df, path, exclude = NULL, exclude_regex = NULL) {
+write_report_csv <- function(df,
+                             path,
+                             exclude = NULL,
+                             exclude_regex = NULL,
+                             comma_strings = TRUE,
+                             digits = 2) {
   if (!is.data.frame(df)) stop("write_report_csv(): 'df' must be a data frame.")
   if (missing(path) || !is.character(path) || length(path) != 1L || is.na(path)) {
     stop("write_report_csv(): 'path' must be a non-NA character scalar.")
   }
   dir <- dirname(path)
   if (!dir.exists(dir)) ensure_outdir(dir)
-  formatted <- format_dataframe(df, exclude = exclude, exclude_regex = exclude_regex)
+  formatted <- format_dataframe(
+    df,
+    exclude = exclude,
+    exclude_regex = exclude_regex,
+    comma_strings = comma_strings,
+    digits = digits
+  )
   tmp <- tempfile(pattern = paste0(basename(path), "."), tmpdir = dir)
   write_csv_compat(formatted, file = tmp, na = "", col_names = TRUE, delim = ",", progress = FALSE)
   .atomic_replace(tmp, path, "write_report_csv()")
+  invisible(path)
 }
 
 write_summary_json <- function(x, path) {                    # JSON writer with pretty printing
@@ -105,5 +135,33 @@ write_summary_json <- function(x, path) {                    # JSON writer with 
   tmp <- tempfile(pattern = paste0(basename(path), "."), tmpdir = dir)
   jsonlite::write_json(x, tmp, auto_unbox = TRUE, pretty = TRUE, digits = NA, na = "null")
   .atomic_replace(tmp, path, "write_summary_json()")
+  invisible(path)
+}
+
+write_report1 <- function(df, outdir, fmt_opts = list()) {
+  path <- .path_join(outdir, REPORT_FILES$r1)
+  args <- c(list(df = df, path = path), fmt_opts)
+  do.call(write_report_csv, args)
+  path
+}
+
+write_report2 <- function(df, outdir, fmt_opts = list()) {
+  path <- .path_join(outdir, REPORT_FILES$r2)
+  args <- c(list(df = df, path = path), fmt_opts)
+  do.call(write_report_csv, args)
+  path
+}
+
+write_report3 <- function(df, outdir, fmt_opts = list()) {
+  path <- .path_join(outdir, REPORT_FILES$r3)
+  args <- c(list(df = df, path = path), fmt_opts)
+  do.call(write_report_csv, args)
+  path
+}
+
+write_summary_outdir <- function(x, outdir) {
+  path <- .path_join(outdir, REPORT_FILES$summary)
+  write_summary_json(x, path)
+  path
 }
 

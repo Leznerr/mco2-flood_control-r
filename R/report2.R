@@ -30,10 +30,10 @@ report_contractor_ranking <- function(df) {                  # build contractor 
         ri <- (1 - (AvgDelay / 90)) * (TotalSavings / TotalCost) * 100
         bad <- !is.finite(ri) | is.na(TotalCost) | TotalCost <= 0
         ri[bad] <- NA_real_
-        ri <- pmax(0, pmin(ri, 100))
+        ri <- pmin(pmax(ri, 0), 100)
         ri
       },
-      RiskFlag = ifelse(is.na(ReliabilityIndex) | ReliabilityIndex < 50, "High Risk", "Low Risk"),
+      RiskFlag = dplyr::if_else(is.na(ReliabilityIndex) | ReliabilityIndex < 50, "High Risk", "Low Risk"),
       Rank = dplyr::row_number()
     ) %>%
     select(Rank, Contractor, TotalCost, NumProjects, AvgDelay, TotalSavings, ReliabilityIndex, RiskFlag)
