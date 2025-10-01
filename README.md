@@ -36,7 +36,6 @@ Rscript main.R --input dpwh_flood_control_projects.csv --outdir outputs
 Key outputs (written to `--outdir`, defaults to `outputs/`):
 
 
-
 ## Tests
 
 Run the automated unit and golden tests:

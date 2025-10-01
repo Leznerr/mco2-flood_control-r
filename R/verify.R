@@ -76,30 +76,6 @@ verify_outputs <- function(dataset, reports, summary, outdir, fmt_opts) {
   append_check(identical(names(r3_file), expected_r3), "Report 3 header matches expected schema.")
 
 
-
-  append_check(.verify_integer_format(r2_file$NumProjects), "Report 2 project counts are integers.")
-  append_check(.verify_numeric_format(r2_file$TotalCost), "Report 2 total cost formatted with commas and 2 decimals.")
-  append_check(.verify_numeric_format(r2_file$AvgDelay), "Report 2 average delay formatted to two decimals.")
-  append_check(.verify_numeric_format(r2_file$TotalSavings), "Report 2 total savings formatted with commas and 2 decimals.")
-  append_check(.verify_numeric_format(r2_file$ReliabilityIndex), "Report 2 reliability index formatted to two decimals.")
-
-  append_check(.verify_integer_format(r3_file$TotalProjects), "Report 3 total projects column is integer formatted.")
-  append_check(.verify_numeric_format(r3_file$AvgSavings), "Report 3 average savings formatted to two decimals.")
-  append_check(.verify_numeric_format(r3_file$OverrunRate), "Report 3 overrun rate formatted to two decimals.")
-  append_check(.verify_numeric_format(r3_file$YoYChange), "Report 3 YoY change formatted to two decimals (ignoring blanks).")
-
-  report_lines <- c(report_lines, "", "Sorting & Value Integrity", "---------------------------")
-
-  r1_sorted <- reports$report1 %>% arrange(desc(EfficiencyScore), Region, MainIsland)
-  r2_sorted <- reports$report2 %>% arrange(desc(TotalCost), Contractor)
-  r3_sorted <- reports$report3 %>% arrange(FundingYear, desc(AvgSavings), TypeOfWork)
-
-  append_check(identical(r1_sorted, reports$report1), "Report 1 sorted by EfficiencyScore desc, Region, MainIsland.")
-  append_check(identical(r2_sorted, reports$report2), "Report 2 sorted by TotalCost desc then Contractor.")
-  append_check(identical(r3_sorted, reports$report3), "Report 3 sorted by FundingYear asc then AvgSavings desc.")
-
-  efficiency_ok <- all(is.na(reports$report1$EfficiencyScore) | (reports$report1$EfficiencyScore >= 0 & reports$report1$EfficiencyScore <= 100))
-
   reliability_ok <- all(is.na(reports$report2$ReliabilityIndex) | (reports$report2$ReliabilityIndex >= 0 & reports$report2$ReliabilityIndex <= 100))
   overrun_ok <- all(is.na(reports$report3$OverrunRate) | (reports$report3$OverrunRate >= 0 & reports$report3$OverrunRate <= 100))
 

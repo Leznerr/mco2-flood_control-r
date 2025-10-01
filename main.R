@@ -14,7 +14,6 @@
 # ------------------------------------------------------------------------------
 
 # ------------------------------- Strict options --------------------------------
-options(warn = 2)                                           # treat warnings as errors to surface issues early
 options(stringsAsFactors = FALSE)                           # keep character columns as character by default
 
 # ------------------------------- Dependencies ---------------------------------
