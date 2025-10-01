@@ -20,6 +20,7 @@ suppressPackageStartupMessages({
 })
 
 
+
 .status_label <- function(ok) if (ok) "[PASS]" else "[FAIL]"
 
 .verify_numeric_format <- function(values) {
@@ -80,6 +81,7 @@ verify_outputs <- function(dataset, reports, summary, outdir, fmt_opts) {
   append_check(identical(names(r2_file), expected_r2), "Report 2 header matches expected schema.")
   append_check(identical(names(r3_file), expected_r3), "Report 3 header matches expected schema.")
 
+
   append_check(overrun_ok, "OverrunRate within [0,100].")
 
   risk_flag_expected <- ifelse(is.na(reports$report2$ReliabilityIndex) | reports$report2$ReliabilityIndex < 50, "High Risk", "Low Risk")
@@ -126,6 +128,7 @@ verify_outputs <- function(dataset, reports, summary, outdir, fmt_opts) {
   readme_text <- tryCatch(readr::read_file("README.md"), error = function(e) "")
   rubric_ok <- grepl("Rubric", readme_text, ignore.case = TRUE) && grepl("Simplicity", readme_text, ignore.case = TRUE)
   append_check(rubric_ok, "README documents rubric alignment for Simplicity/Performance/Readability/Correctness/UX.")
+
 
 
   report_lines <- c(report_lines, "", "Formatting Parameters", "-----------------------")
