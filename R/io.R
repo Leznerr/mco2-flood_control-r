@@ -17,6 +17,18 @@ suppressPackageStartupMessages({                             # ensure clean cons
   library(jsonlite)
 })
 
+.path_join <- function(dir, filename) {                      # simple helper to join directory and filename
+  file.path(dir, filename)
+}
+
+if (!exists("REPORT_FILES", inherits = TRUE)) {              # ensure shared constants available when sourced standalone
+  if (file.exists("constants.R")) {
+    source("constants.R", chdir = TRUE)
+  } else if (file.exists(file.path("R", "constants.R"))) {
+    source(file.path("R", "constants.R"), chdir = TRUE)
+  }
+}
+
 
 
 # ---- readr write compatibility (pre-2.0 vs >=2.0) ----------------------------
@@ -141,5 +153,21 @@ write_summary_outdir <- function(x, outdir) {
   path <- .path_join(outdir, REPORT_FILES$summary)
   write_summary_json(x, path)
   path
+}
+
+path_report1 <- function(outdir) {                             # helper for tests/verification
+  .path_join(outdir, REPORT_FILES$r1)
+}
+
+path_report2 <- function(outdir) {                             # helper for tests/verification
+  .path_join(outdir, REPORT_FILES$r2)
+}
+
+path_report3 <- function(outdir) {                             # helper for tests/verification
+  .path_join(outdir, REPORT_FILES$r3)
+}
+
+path_summary <- function(outdir) {                             # helper for tests/verification
+  .path_join(outdir, REPORT_FILES$summary)
 }
 
