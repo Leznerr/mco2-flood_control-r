@@ -11,13 +11,12 @@ source_module <- function(...) {
 }
 
 source_module("R", "constants.R")
-
+source_module("R", "verify.R")
 
 library(testthat)
 library(tibble)
 library(readr)
 library(jsonlite)
-
 
 test_that("verification report includes rubric mapping section", {
   outdir <- tempfile("verify-out-")
@@ -71,7 +70,40 @@ test_that("verification report includes rubric mapping section", {
     total_savings = sum(dataset$CostSavings)
   )
 
+  fmt_opts <- list(comma_strings = TRUE, digits = 2)
 
+  path1_local <- file.path(outdir, REPORT_FILES$r1)
+  path2_local <- file.path(outdir, REPORT_FILES$r2)
+  path3_local <- file.path(outdir, REPORT_FILES$r3)
+  path_summary_local <- file.path(outdir, REPORT_FILES$summary)
+
+  readr::write_csv(report1, path1_local, na = "")
+  readr::write_csv(report2, path2_local, na = "")
+  readr::write_csv(report3, path3_local, na = "")
+  jsonlite::write_json(summary_list, path_summary_local, auto_unbox = TRUE, pretty = TRUE)
+
+  globals <- c("expected_r1", "path1", "path2", "path3", "path_summary_json", "overrun_ok", "preview_ok")
+  old_globals <- mget(globals, envir = globalenv(), ifnotfound = as.list(rep(list(NULL), length(globals))))
+  on.exit({
+    for (nm in globals) {
+      previous <- old_globals[[nm]]
+      if (is.null(previous)) {
+        if (exists(nm, envir = globalenv(), inherits = FALSE)) rm(list = nm, envir = globalenv())
+      } else {
+        assign(nm, previous, envir = globalenv())
+      }
+    }
+  }, add = TRUE)
+
+  assign("expected_r1", names(report1), envir = globalenv())
+  assign("path1", path1_local, envir = globalenv())
+  assign("path2", path2_local, envir = globalenv())
+  assign("path3", path3_local, envir = globalenv())
+  assign("path_summary_json", path_summary_local, envir = globalenv())
+  assign("overrun_ok", TRUE, envir = globalenv())
+  assign("preview_ok", TRUE, envir = globalenv())
+
+  reports <- list(report1 = report1, report2 = report2, report3 = report3)
 
   verification_path <- verify_outputs(dataset, reports, summary_list, outdir, fmt_opts)
 
@@ -86,4 +118,6 @@ test_that("verification report includes rubric mapping section", {
   expect_true(any(grepl("\\[PASS\\].*Readability", rubric_entries)))
   expect_true(any(grepl("\\[PASS\\].*Correctness", rubric_entries)))
   expect_true(any(grepl("\\[PASS\\].*(User Experience|UX)", rubric_entries)))
+  expect_equal(sum(grepl("^\u002d \\[PASS\\]", rubric_entries)), 5)
+})
 
