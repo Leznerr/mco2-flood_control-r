@@ -17,29 +17,7 @@ suppressPackageStartupMessages({                             # ensure clean cons
   library(jsonlite)
 })
 
-# ---- Canonical output filenames -----------------------------------------------
-REPORT_FILES <- list(
-  r1 = "report1_regional_efficiency.csv",
-  r2 = "report2_top_contractors.csv",
-  r3 = "report3_overruns_trend.csv",
-  summary = "summary.json"
-)
 
-path_report1 <- function(outdir) file.path(outdir, REPORT_FILES$r1)
-path_report2 <- function(outdir) file.path(outdir, REPORT_FILES$r2)
-path_report3 <- function(outdir) file.path(outdir, REPORT_FILES$r3)
-path_summary <- function(outdir) file.path(outdir, REPORT_FILES$summary)
-
-.path_join <- function(outdir, fname) {
-  if (missing(outdir) || !is.character(outdir) || length(outdir) != 1L || is.na(outdir)) {
-    stop(".path_join(): 'outdir' must be a non-NA character scalar.")
-  }
-  if (missing(fname) || !is.character(fname) || length(fname) != 1L || is.na(fname)) {
-    stop(".path_join(): 'fname' must be a non-NA character scalar.")
-  }
-  if (!dir.exists(outdir)) dir.create(outdir, recursive = TRUE, showWarnings = FALSE)
-  file.path(outdir, fname)
-}
 
 # ---- readr write compatibility (pre-2.0 vs >=2.0) ----------------------------
 .readr_has_escape <- function() {
@@ -163,5 +141,6 @@ write_summary_outdir <- function(x, outdir) {
   path <- .path_join(outdir, REPORT_FILES$summary)
   write_summary_json(x, path)
   path
+
 }
 
