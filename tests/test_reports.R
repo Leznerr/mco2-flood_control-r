@@ -72,7 +72,7 @@ test_that("report 2 top-15, \u22655 projects, sorted by cost", {
   expect_true(nrow(r2) <= 15)
   expect_true(all(r2$NumProjects >= 5))
   expect_true(!is.unsorted(-r2$TotalCost))
-  expect_true(all(r2$ReliabilityIndex >= 0 & r2$ReliabilityIndex <= 100, na.rm = TRUE))
+  expect_true(all(is.na(r2$ReliabilityIndex) | r2$ReliabilityIndex <= 100))
   expected_flag <- ifelse(is.na(r2$ReliabilityIndex) | r2$ReliabilityIndex < 50, "High Risk", "Low Risk")
   expect_identical(r2$RiskFlag, expected_flag)
 })

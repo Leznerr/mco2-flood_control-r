@@ -13,8 +13,7 @@
 # Notes      : Assumes R/ modules exist and follow their declared contracts.
 # ------------------------------------------------------------------------------
 
-# ------------------------------- Strict options --------------------------------
-options(stringsAsFactors = FALSE)                           # keep character columns as character by default
+
 
 # ------------------------------- Dependencies ---------------------------------
 suppressPackageStartupMessages({                            # suppress package banners for clean logs
@@ -43,4 +42,3 @@ suppressPackageStartupMessages({                            # suppress package b
 .source_or_die("R/clean.R")                                  # clean_all()
 .source_or_die("R/derive.R")                                 # derive_fields(), filter_years()
 .source_or_die("R/report1.R")                                # report_regional_efficiency()
-

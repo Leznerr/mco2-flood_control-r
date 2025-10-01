@@ -29,9 +29,6 @@ report_contractor_ranking <- function(df) {                  # build contractor 
         ri <- (1 - (AvgDelay / 90)) * (TotalSavings / TotalCost) * 100
         bad <- !is.finite(ri) | is.na(TotalCost) | TotalCost <= 0
         ri[bad] <- NA_real_
-        ri <- pmin(pmax(ri, 0), 100)
-        ri
-      },
 
     ) %>%
     select(Contractor, NumProjects, TotalCost, AvgDelay, TotalSavings, ReliabilityIndex, RiskFlag)

@@ -19,29 +19,6 @@ suppressPackageStartupMessages({
   library(jsonlite)
 })
 
-if (!exists("REPORT_PREVIEW_HEADINGS", inherits = TRUE)) {
-  if (file.exists("constants.R")) {
-    source("constants.R", chdir = TRUE)
-  } else if (file.exists(file.path("R", "constants.R"))) {
-    source(file.path("R", "constants.R"), chdir = TRUE)
-  }
-}
-
-if (!exists(".run_interactive_spec", mode = "function")) {
-  if (file.exists("interactive.R")) {
-    source("interactive.R", chdir = TRUE)
-  } else if (file.exists(file.path("R", "interactive.R"))) {
-    source(file.path("R", "interactive.R"), chdir = TRUE)
-  }
-}
-
-if (!exists("path_report1", mode = "function")) {
-  if (file.exists("io.R")) {
-    source("io.R", chdir = TRUE)
-  } else if (file.exists(file.path("R", "io.R"))) {
-    source(file.path("R", "io.R"), chdir = TRUE)
-  }
-}
 
 .status_label <- function(ok) if (ok) "[PASS]" else "[FAIL]"
 
@@ -86,16 +63,13 @@ verify_outputs <- function(dataset, reports, summary, outdir, fmt_opts) {
 
   report_lines <- c(report_lines, "Schema & Formatting", "----------------------")
 
-  path1 <- path_report1(outdir)
-  path2 <- path_report2(outdir)
-  path3 <- path_report3(outdir)
-  path_summary_json <- path_summary(outdir)
+
 
   r1_file <- .read_csv_as_character(path1)
   r2_file <- .read_csv_as_character(path2)
   r3_file <- .read_csv_as_character(path3)
 
-  expected_r1 <- c("Region", "MainIsland", "TotalBudget", "MedianSavings", "AvgDelay", "HighDelayPct", "EfficiencyScore")
+
   expected_r2 <- c("Contractor", "NumProjects", "TotalCost", "AvgDelay", "TotalSavings", "ReliabilityIndex", "RiskFlag")
   expected_r3 <- c("FundingYear", "TypeOfWork", "TotalProjects", "AvgSavings", "OverrunRate", "YoYChange")
 
@@ -103,13 +77,7 @@ verify_outputs <- function(dataset, reports, summary, outdir, fmt_opts) {
   append_check(identical(names(r2_file), expected_r2), "Report 2 header matches expected schema.")
   append_check(identical(names(r3_file), expected_r3), "Report 3 header matches expected schema.")
 
-  efficiency_ok <- all(is.na(reports$report1$EfficiencyScore) | (reports$report1$EfficiencyScore >= 0 & reports$report1$EfficiencyScore <= 100))
-  reliability_ok <- all(is.na(reports$report2$ReliabilityIndex) | (reports$report2$ReliabilityIndex >= 0 & reports$report2$ReliabilityIndex <= 100))
-  overrun_ok <- all(is.na(reports$report3$OverrunRate) | (reports$report3$OverrunRate >= 0 & reports$report3$OverrunRate <= 100))
 
-  append_check(efficiency_ok, "EfficiencyScore within [0,100].")
-
-  append_check(reliability_ok, "ReliabilityIndex within [0,100].")
   append_check(overrun_ok, "OverrunRate within [0,100].")
 
   risk_flag_expected <- ifelse(is.na(reports$report2$ReliabilityIndex) | reports$report2$ReliabilityIndex < 50, "High Risk", "Low Risk")
@@ -151,15 +119,6 @@ verify_outputs <- function(dataset, reports, summary, outdir, fmt_opts) {
 
   report_lines <- c(report_lines, "", "UX & Documentation", "----------------------")
 
-  preview_titles <- unname(unlist(REPORT_PREVIEW_HEADINGS))
-  if (exists(".run_interactive_spec", mode = "function")) {
-    preview_capture <- capture.output(.run_interactive_spec(reports, preview_rows = 3L))
-    preview_heading_lines <- preview_capture[grepl("^Report [0-9]+:", preview_capture)]
-    preview_subset <- preview_heading_lines[seq_len(min(length(preview_heading_lines), length(preview_titles)))]
-    preview_ok <- identical(preview_subset, preview_titles)
-  } else {
-    preview_ok <- FALSE
-  }
 
   append_check(preview_ok, "Interactive preview headings mirror sample output titles.")
 

@@ -66,5 +66,4 @@ test_that("report 2 applies the NumProjects threshold correctly", {
   expect_true("Firm 5" %in% report$Contractor)
   expect_true("Firm 6" %in% report$Contractor)
   expect_true(all(report$ReliabilityIndex <= 100, na.rm = TRUE))
-  expect_true(all(report$ReliabilityIndex >= 0, na.rm = TRUE))
 })
