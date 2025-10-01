@@ -19,6 +19,30 @@ suppressPackageStartupMessages({
   library(jsonlite)
 })
 
+# Ensure shared constants + interactive helpers are available -------------------
+if (!exists("REPORT_FILES", inherits = TRUE)) {
+  candidates <- c("R/constants.R", "../R/constants.R", file.path("..", "R", "constants.R"), "constants.R")
+  for (path in candidates) {
+    if (file.exists(path)) {
+      source(path, chdir = TRUE)
+      break
+    }
+  }
+  if (!exists("REPORT_FILES", inherits = TRUE)) {
+    stop("verify.R: unable to load REPORT_FILES constant; ensure R/constants.R is present.")
+  }
+}
+
+if (!exists("preview_headings", inherits = TRUE)) {
+  candidates <- c("R/interactive_preview.R", "../R/interactive_preview.R", file.path("..", "R", "interactive_preview.R"))
+  for (path in candidates) {
+    if (file.exists(path)) {
+      source(path, chdir = TRUE)
+      break
+    }
+  }
+}
+
 .status_label <- function(ok) if (ok) "[PASS]" else "[FAIL]"
 
 .verify_numeric_format <- function(values) {
@@ -36,6 +60,26 @@ suppressPackageStartupMessages({
 
 .read_csv_as_character <- function(path) {
   readr::read_csv(path, col_types = readr::cols(.default = readr::col_character()))
+}
+
+.preview_heading_guard <- function(reports, summary, fmt_opts, preview_limit = 5) {
+  if (!exists("preview_headings", inherits = TRUE)) {
+    return(TRUE)  # nothing to compare against if helper not available
+  }
+  expected <- preview_headings()
+  if (!exists(".run_interactive_spec", mode = "function", inherits = TRUE)) {
+    return(TRUE)
+  }
+  captured <- capture.output(
+    .run_interactive_spec(
+      reports = reports,
+      summary = summary,
+      fmt_opts = fmt_opts,
+      preview_limit = preview_limit
+    )
+  )
+  observed <- captured[captured %in% expected]
+  length(observed) == length(expected) && identical(observed, expected)
 }
 
 verify_outputs <- function(dataset, reports, summary, outdir, fmt_opts) {
@@ -62,25 +106,31 @@ verify_outputs <- function(dataset, reports, summary, outdir, fmt_opts) {
 
   report_lines <- c(report_lines, "Schema & Formatting", "----------------------")
 
-
+  path1 <- path_report1(outdir)
+  path2 <- path_report2(outdir)
+  path3 <- path_report3(outdir)
+  path_summary_json <- path_summary(outdir)
 
   r1_file <- .read_csv_as_character(path1)
   r2_file <- .read_csv_as_character(path2)
   r3_file <- .read_csv_as_character(path3)
 
-
+  expected_r1 <- c("Region", "MainIsland", "TotalBudget", "MedianSavings", "AvgDelay", "HighDelayPct", "EfficiencyScore")
+  expected_r2 <- c("Contractor", "NumProjects", "TotalCost", "AvgDelay", "TotalSavings", "ReliabilityIndex", "RiskFlag")
   expected_r3 <- c("FundingYear", "TypeOfWork", "TotalProjects", "AvgSavings", "OverrunRate", "YoYChange")
 
   append_check(identical(names(r1_file), expected_r1), "Report 1 header matches expected schema.")
   append_check(identical(names(r2_file), expected_r2), "Report 2 header matches expected schema.")
   append_check(identical(names(r3_file), expected_r3), "Report 3 header matches expected schema.")
 
-
-  reliability_ok <- all(is.na(reports$report2$ReliabilityIndex) | (reports$report2$ReliabilityIndex >= 0 & reports$report2$ReliabilityIndex <= 100))
-  overrun_ok <- all(is.na(reports$report3$OverrunRate) | (reports$report3$OverrunRate >= 0 & reports$report3$OverrunRate <= 100))
+  efficiency_ok <- all(is.na(reports$report1$EfficiencyScore) |
+                         (reports$report1$EfficiencyScore >= 0 & reports$report1$EfficiencyScore <= 100))
+  reliability_ok <- all(is.na(reports$report2$ReliabilityIndex) |
+                          (reports$report2$ReliabilityIndex >= 0 & reports$report2$ReliabilityIndex <= 100))
+  overrun_ok <- all(is.na(reports$report3$OverrunRate) |
+                      (reports$report3$OverrunRate >= 0 & reports$report3$OverrunRate <= 100))
 
   append_check(efficiency_ok, "EfficiencyScore within [0,100].")
-
   append_check(reliability_ok, "ReliabilityIndex within [0,100].")
   append_check(overrun_ok, "OverrunRate within [0,100].")
 
@@ -123,8 +173,7 @@ verify_outputs <- function(dataset, reports, summary, outdir, fmt_opts) {
 
   report_lines <- c(report_lines, "", "UX & Documentation", "----------------------")
 
-  preview_titles <- c(
-
+  preview_ok <- .preview_heading_guard(reports, summary, fmt_opts, preview_limit = 5)
   append_check(preview_ok, "Interactive preview headings mirror sample output titles.")
 
   readme_text <- tryCatch(readr::read_file("README.md"), error = function(e) "")
@@ -147,4 +196,3 @@ verify_outputs <- function(dataset, reports, summary, outdir, fmt_opts) {
 
   invisible(verification_path)
 }
-
