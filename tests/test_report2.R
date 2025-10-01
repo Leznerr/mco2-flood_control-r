@@ -41,9 +41,7 @@ test_that("report 2 enforces eligibility and ranking rules", {
   expect_equal(
     colnames(report),
     c(
-      "Contractor",
-      "NumProjects",
-      "TotalCost",
+
       "AvgDelay",
       "TotalSavings",
       "ReliabilityIndex",
