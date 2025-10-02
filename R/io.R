@@ -6,8 +6,9 @@
 #   - ensure_outdir(path) creates directory recursively if it does not exist.
 #   - write_report_csv(df, path, exclude = NULL, exclude_regex = NULL) applies
 #     format_dataframe() and writes atomically via temp file rename.
-#   - write_summary_json(x, path) serialises using jsonlite::write_json with
-#     pretty formatting and auto_unbox semantics (atomic write as well).
+#   - write_summary_json(x, outdir) serialises to summary.json inside the
+#     provided directory using jsonlite::write_json with pretty formatting and
+#     auto_unbox semantics (atomic write as well).
 # Rubric    : Correctness (atomic writes), UX (Excel-friendly CSV),
 #             Readability (formal comments), Simplicity (minimal helpers).
 # ------------------------------------------------------------------------------
@@ -104,16 +105,26 @@ write_report_csv <- function(df,
   invisible(path)
 }
 
-write_summary_json <- function(x, path) {                    # JSON writer with pretty printing
-  if (missing(path) || !is.character(path) || length(path) != 1L || is.na(path)) {
-    stop("write_summary_json(): 'path' must be a non-NA character scalar.")
+write_summary_json <- function(x, outdir) {                  # JSON writer with pretty printing
+  if (missing(outdir) || !is.character(outdir) || length(outdir) != 1L || is.na(outdir)) {
+    stop("write_summary_json(): 'outdir' must be a non-NA character scalar.")
   }
-  dir <- dirname(path)
-  if (!dir.exists(dir)) ensure_outdir(dir)
+
+  looks_like_file <- grepl("\\.json$", outdir, ignore.case = TRUE)
+  if (looks_like_file && !dir.exists(outdir)) {
+    dir <- dirname(outdir)
+    if (!dir.exists(dir)) ensure_outdir(dir)
+    path <- outdir
+  } else {
+    dir <- outdir
+    if (!dir.exists(dir)) ensure_outdir(dir)
+    path <- file.path(dir, "summary.json")
+  }
+
   tmp <- tempfile(pattern = paste0(basename(path), "."), tmpdir = dir)
   jsonlite::write_json(x, tmp, auto_unbox = TRUE, pretty = TRUE, digits = 2, na = "null")
   .atomic_replace(tmp, path, "write_summary_json()")
-  invisible(path)
+  path
 }
 
 write_report1 <- function(df, outdir, fmt_opts = list()) {
@@ -138,9 +149,6 @@ write_report3 <- function(df, outdir, fmt_opts = list()) {
 }
 
 write_summary_outdir <- function(x, outdir) {
-  path <- .path_join(outdir, REPORT_FILES$summary)
-  write_summary_json(x, path)
-  path
-
+  write_summary_json(x, outdir)
 }
 
