@@ -9,10 +9,10 @@
 #             schema ordering and formatted values).
 # ------------------------------------------------------------------------------
 
-
-suppressPackageStartupMessages({                             # quiet load
+suppressPackageStartupMessages({                             # quiet load for tidy verbs
   library(dplyr)
 })
+
 
 
 build_report1 <- function(df) {
