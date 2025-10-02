@@ -14,6 +14,12 @@ source_module("R", "utils_log.R")
 source_module("R", "ingest.R")
 source_module("R", "validate.R")
 
+if (exists("log_set_level", mode = "function")) {
+  original_log_level <- log_get_level()
+  on.exit(log_set_level(original_log_level), add = TRUE)
+  log_set_level("ERROR")
+}
+
 library(testthat)
 library(tibble)
 
