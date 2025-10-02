@@ -20,9 +20,6 @@ suppressPackageStartupMessages({                             # quiet load for CL
 build_report1 <- function(df) {                               # build report 1 summary
   if (!is.data.frame(df)) stop("build_report1(): 'df' must be a data frame.")
 
-  report <- df %>%
-    group_by(Region, MainIsland) %>%
-    summarise(
 
     ) %>%
     select(Region, MainIsland, TotalBudget, MedianSavings, AvgDelay, HighDelayPct, EfficiencyScore) %>%
