@@ -9,7 +9,7 @@
 #             schema ordering and formatted values).
 # ------------------------------------------------------------------------------
 
-if (!exists("minmax_0_100", mode = "function")) {          # ensure shared helpers available
+
   source("R/utils_format.R")
 }
 
