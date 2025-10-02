@@ -1,15 +1,9 @@
 # utils_cli.R
 # ------------------------------------------------------------------------------
-# Purpose   : Centralise command-line interface behaviour for the pipeline.
-#             Provides OptionParser construction, argument validation, and
-#             lightweight path normalisation that works cross-platform.
-# Contract  :
-#   - build_cli() -> OptionParser (from optparse).
-#   - validate_cli_args(args) -> stops with informative errors when flags
-#     are missing or malformed.
-#   - normalize_cli_paths(args) -> returns same list with paths normalised.
-# Rubric    : Simplicity (single module), Correctness (fail-fast), UX (clear
-#             help strings and error messages), Readability (formal comments).
+# Purpose   : Provide the lightweight interactive CLI helpers required by the
+#             flood-control reporting pipeline. These helpers intentionally use
+#             only base R features so that they work in constrained runtime
+#             environments.
 # ------------------------------------------------------------------------------
 
 suppressPackageStartupMessages({                             # avoid optparse startup chatter during CLI usage
@@ -65,3 +59,56 @@ normalize_cli_paths <- function(args) {                       # return args with
   if (!is.null(lhs)) lhs else rhs
 }
 
+# Internal helper that safely reads a single line from stdin, falling back to
+# readline() when stdin is not connected (e.g., Windows RGui). Returns
+# NA_character_ when no input could be retrieved.
+.read_cli_line <- function() {
+  line <- tryCatch(readLines(con = stdin(), n = 1, warn = FALSE), error = function(...) character(0))
+  if (length(line) == 0L) {
+    line <- tryCatch(readline(), error = function(...) character(0))
+  }
+  if (length(line) == 0L) {
+    return(NA_character_)
+  }
+  value <- line[[1L]]
+  if (is.na(value)) {
+    return(NA_character_)
+  }
+  value
+}
+
+print_menu <- function() {
+  cat("Select Language Implementation:\n")
+  cat("[1] Load the file\n")
+  cat("[2] Generate Reports\n\n")
+  cat("Enter choice: ")
+  flush.console()
+}
+
+read_choice <- function() {
+  input <- .read_cli_line()
+  if (is.na(input)) {
+    return(NA_integer_)
+  }
+  choice <- trimws(input)
+  if (identical(choice, "1") || identical(choice, "2")) {
+    cat(sprintf("Enter choice: %s\n", choice))
+    flush.console()
+    return(as.integer(choice))
+  }
+  if (!is.na(choice) && nzchar(choice)) {
+    cat(sprintf("Enter choice: %s\n", choice))
+    flush.console()
+  }
+  NA_integer_
+}
+
+prompt_back_to_menu <- function() {
+  cat("Back to Report Selection (Y/N): ")
+  flush.console()
+  input <- .read_cli_line()
+  if (is.na(input)) {
+    return(FALSE)
+  }
+  tolower(trimws(input)) == "y"
+}
