@@ -7,6 +7,7 @@ suppressPackageStartupMessages({
   library(optparse)
 })
 
+
 build_cli <- function() {
   option_list <- list(
     make_option(c("-i", "--input"), type = "character", metavar = "FILE",
@@ -16,12 +17,10 @@ build_cli <- function() {
     make_option("--interactive", action = "store_true", default = FALSE,
                 help = "Enable interactive preview of report outputs.")
   )
+
   OptionParser(option_list = option_list, usage = "%prog --input <file> [--outdir <dir>]")
 }
 
-`%||%` <- function(lhs, rhs) {
-  if (!is.null(lhs)) lhs else rhs
-}
 
 validate_cli_args <- function(args) {
   if (is.null(args$input) || is.na(args$input) || !nzchar(args$input)) {
@@ -30,6 +29,7 @@ validate_cli_args <- function(args) {
   if (!file.exists(args$input)) {
     stop(sprintf("CLI: input file not found -> %s", args$input))
   }
+
   outdir <- args$outdir %||% "outputs"
   if (!is.null(outdir) && (is.na(outdir) || !nzchar(outdir))) {
     stop("CLI: --outdir must be a non-empty string when provided.")
@@ -43,6 +43,7 @@ validate_cli_args <- function(args) {
       stop(sprintf("CLI: unable to create --outdir '%s'.", outdir))
     }
   }
+
   invisible(args)
 }
 
@@ -52,19 +53,7 @@ normalize_cli_paths <- function(args) {
   args
 }
 
-.read_cli_line <- function() {
-  line <- tryCatch(readLines(con = stdin(), n = 1, warn = FALSE), error = function(...) character(0))
-  if (length(line) == 0L) {
-    line <- tryCatch(readline(), error = function(...) character(0))
-  }
-  if (length(line) == 0L) {
-    return(NA_character_)
-  }
-  value <- line[[1L]]
-  if (is.na(value)) {
-    return(NA_character_)
-  }
-  value
+
 }
 
 
