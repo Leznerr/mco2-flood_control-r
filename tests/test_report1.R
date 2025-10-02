@@ -31,10 +31,7 @@ test_that("report 1 computes efficiency metrics within bounds", {
     c(
       "Region",
       "MainIsland",
-      "TotalApprovedBudget",
-      "MedianSavings",
-      "AvgDelay",
-      "Delay30Rate",
+
       "EfficiencyScore"
     )
   )

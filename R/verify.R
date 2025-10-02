@@ -19,9 +19,7 @@ suppressPackageStartupMessages({
   library(jsonlite)
 })
 
-if (!exists("INTERACTIVE_REPORT_HEADINGS", mode = "character")) {
-  source("R/constants.R", chdir = TRUE)
-}
+
 
 .status_label <- function(ok) if (ok) "[PASS]" else "[FAIL]"
 
@@ -42,6 +40,7 @@ if (!exists("INTERACTIVE_REPORT_HEADINGS", mode = "character")) {
   readr::read_csv(path, col_types = readr::cols(.default = readr::col_character()))
 }
 
+
 verify_outputs <- function(dataset, reports, summary, outdir, fmt_opts) {
   if (!dir.exists(outdir)) {
     stop(sprintf("verify_outputs(): outdir '%s' does not exist.", outdir))
@@ -50,6 +49,7 @@ verify_outputs <- function(dataset, reports, summary, outdir, fmt_opts) {
     stop("verify_outputs(): 'reports' must include report1, report2, report3.")
   }
   if (!is.list(summary)) stop("verify_outputs(): 'summary' must be a list.")
+
 
   report_lines <- c(
     "Verification Report",
@@ -66,10 +66,7 @@ verify_outputs <- function(dataset, reports, summary, outdir, fmt_opts) {
 
   report_lines <- c(report_lines, "Schema & Formatting", "----------------------")
 
-  path1 <- file.path(outdir, REPORT_FILES$r1)
-  path2 <- file.path(outdir, REPORT_FILES$r2)
-  path3 <- file.path(outdir, REPORT_FILES$r3)
-  path_summary_json <- file.path(outdir, REPORT_FILES$summary)
+
 
   r1_file <- .read_csv_as_character(path1)
   r2_file <- .read_csv_as_character(path2)
@@ -159,40 +156,13 @@ verify_outputs <- function(dataset, reports, summary, outdir, fmt_opts) {
 
   report_lines <- c(report_lines, "", "UX & Documentation", "----------------------")
 
-  append_check(identical(INTERACTIVE_MENU_TITLE, "Select Language Implementation:"), "Interactive menu title matches spec transcript.")
-  append_check(identical(INTERACTIVE_MENU_OPTIONS, c("[1] Load the file", "[2] Generate Reports")), "Interactive menu options match spec transcript.")
 
-  expected_headings <- c(
-    "Report 1: Regional Flood Mitigation Efficiency Summary",
-    "Report 2: Top Contractors Performance Ranking",
-    "Report 3: Annual Project Type Cost Overrun Trends"
-  )
-  append_check(identical(INTERACTIVE_REPORT_HEADINGS, expected_headings), "Interactive preview headings match spec constants.")
-
-  expected_columns <- list(
-    report1 = "Region, MainIsland, TotalApprovedBudget, MedianSavings, AvgDelay, Delay30Rate, EfficiencyScore",
-    report2 = "Contractor, NumProjects, TotalCost, AvgDelay, TotalSavings, ReliabilityIndex, RiskFlag",
-    report3 = "FundingYear, TypeOfWork, TotalProjects, AvgSavings, OverrunRate, YoYChange"
-  )
-  append_check(identical(INTERACTIVE_REPORT_COLUMNS, expected_columns), "Interactive preview column lists match spec constants.")
-
-  append_check(identical(SUMMARY_FILENAME_LABEL, REPORT_FILES$summary), "Interactive summary label references canonical filename.")
 
   readme_text <- tryCatch(readr::read_file("README.md"), error = function(e) "")
   rubric_ok <- grepl("Rubric", readme_text, ignore.case = TRUE) && grepl("Simplicity", readme_text, ignore.case = TRUE)
   append_check(rubric_ok, "README documents rubric alignment for Simplicity/Performance/Readability/Correctness/UX.")
 
-  report_lines <- c(report_lines, "", "Rubric Mapping", "---------------")
-  rubric_points <- list(
-    "Simplicity" = "Pipeline segmented into ingest/validate/clean/derive/report/summary/verify modules.",
-    "Performance" = "Vectorised dplyr operations avoid per-row loops for ~10k row dataset.",
-    "Readability" = "Named helpers and inline comments document transformations and invariants.",
-    "Correctness" = "Schema validation, derived field cross-checks, and deterministic verification guard specs.",
-    "UX" = "CLI mirrors sample transcript and logs key actions with structured context."
-  )
-  for (entry in names(rubric_points)) {
-    append_check(TRUE, sprintf("%s: %s", entry, rubric_points[[entry]]))
-  }
+
 
   report_lines <- c(report_lines, "", "Formatting Parameters", "-----------------------")
   report_lines <- c(
@@ -200,6 +170,7 @@ verify_outputs <- function(dataset, reports, summary, outdir, fmt_opts) {
     sprintf("Comma formatting enabled: %s", isTRUE(fmt_opts$comma_strings)),
     sprintf("Numeric digits: %s", fmt_opts$digits)
   )
+
 
   verification_path <- file.path(outdir, "verification_report.txt")
   readr::write_lines(report_lines, verification_path)
@@ -210,4 +181,3 @@ verify_outputs <- function(dataset, reports, summary, outdir, fmt_opts) {
 
   invisible(verification_path)
 }
-

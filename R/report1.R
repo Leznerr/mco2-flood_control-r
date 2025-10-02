@@ -38,4 +38,3 @@ report_regional_efficiency <- function(df) {                 # build report 1 su
     select(Region, MainIsland, TotalApprovedBudget, MedianSavings, AvgDelay, Delay30Rate, EfficiencyScore) %>%
     arrange(desc(EfficiencyScore), Region, MainIsland)
 }
-
