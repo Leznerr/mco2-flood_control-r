@@ -9,6 +9,7 @@ suppressPackageStartupMessages({                             # quiet load
   library(dplyr)
 })
 
+
 build_report2 <- function(df) {                               # build report 2 contractor ranking
   if (!is.data.frame(df)) stop("build_report2(): 'df' must be a data frame.")
 
