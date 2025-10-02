@@ -6,9 +6,9 @@
 #   - ensure_outdir(path) creates directory recursively if it does not exist.
 #   - write_report_csv(df, path, exclude = NULL, exclude_regex = NULL) applies
 #     format_dataframe() and writes atomically via temp file rename.
-#   - write_summary_json(x, outdir) serialises to summary.json inside the
-#     provided directory using jsonlite::write_json with pretty formatting and
-#     auto_unbox semantics (atomic write as well).
+#   - write_summary_json(x, path) serialises to the provided JSON path using
+#     jsonlite::write_json with pretty formatting and auto_unbox semantics
+#     (atomic write as well).
 # Rubric    : Correctness (atomic writes), UX (Excel-friendly CSV),
 #             Readability (formal comments), Simplicity (minimal helpers).
 # ------------------------------------------------------------------------------
@@ -34,13 +34,11 @@ if (!exists("%||%", mode = "function")) {                     # local fallback w
   do.call(file.path, parts)
 }
 
-summary_filename <- if (exists("SUMMARY_FILENAME_LABEL")) SUMMARY_FILENAME_LABEL else "summary.json"
-
 REPORT_FILES <- list(
   r1 = "report1.csv",
   r2 = "report2.csv",
   r3 = "report3.csv",
-  summary = summary_filename %||% "summary.json"
+  summary = "summary.json"
 )
 
 path_report1 <- function(outdir) {
@@ -59,12 +57,7 @@ path_summary <- function(outdir) {
   if (missing(outdir) || !is.character(outdir) || length(outdir) != 1L || is.na(outdir)) {
     stop("path_summary(): 'outdir' must be a non-NA character scalar.")
   }
-  looks_like_file <- grepl("\\.json$", outdir, ignore.case = TRUE)
-  if (looks_like_file) {
-    outdir
-  } else {
-    .path_join(outdir, REPORT_FILES$summary)
-  }
+  .path_join(outdir, REPORT_FILES$summary)
 }
 
 
@@ -153,21 +146,13 @@ write_report_csv <- function(df,
   invisible(path)
 }
 
-write_summary_json <- function(x, outdir) {                  # JSON writer with pretty printing
-  if (missing(outdir) || !is.character(outdir) || length(outdir) != 1L || is.na(outdir)) {
-    stop("write_summary_json(): 'outdir' must be a non-NA character scalar.")
+write_summary_json <- function(x, path) {                    # JSON writer with pretty printing
+  if (missing(path) || !is.character(path) || length(path) != 1L || is.na(path)) {
+    stop("write_summary_json(): 'path' must be a non-NA character scalar.")
   }
 
-  looks_like_file <- grepl("\\.json$", outdir, ignore.case = TRUE)
-  if (looks_like_file && !dir.exists(outdir)) {
-    dir <- dirname(outdir)
-    if (!dir.exists(dir)) ensure_outdir(dir)
-    path <- outdir
-  } else {
-    dir <- outdir
-    if (!dir.exists(dir)) ensure_outdir(dir)
-    path <- path_summary(dir)
-  }
+  dir <- dirname(path)
+  if (!dir.exists(dir)) ensure_outdir(dir)
 
   tmp <- tempfile(pattern = paste0(basename(path), "."), tmpdir = dir)
   jsonlite::write_json(x, tmp, auto_unbox = TRUE, pretty = TRUE, digits = 2, na = "null")
