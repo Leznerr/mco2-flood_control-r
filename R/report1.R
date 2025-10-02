@@ -23,34 +23,7 @@ build_report1 <- function(df) {                               # build report 1 s
   report <- df %>%
     group_by(Region, MainIsland) %>%
     summarise(
-      TotalBudget = {
-        values <- as.numeric(ApprovedBudgetForContract)
-        if (all(is.na(values))) NA_real_ else sum(values, na.rm = TRUE)
-      },
-      MedianSavings = {
-        values <- as.numeric(CostSavings)
-        if (all(is.na(values))) NA_real_ else stats::median(values, na.rm = TRUE)
-      },
-      AvgDelay = {
-        values <- as.numeric(CompletionDelayDays)
-        if (all(is.na(values))) NA_real_ else mean(values, na.rm = TRUE)
-      },
-      HighDelayPct = {
-        delays <- as.numeric(CompletionDelayDays)
-        if (all(is.na(delays))) {
-          NA_real_
-        } else {
-          mean(delays > 30, na.rm = TRUE) * 100
-        }
-      },
-      .groups = "drop"
-    ) %>%
-    mutate(
-      EfficiencyScore = {
-        adj_delay <- ifelse(is.na(AvgDelay), NA_real_, pmax(AvgDelay, 1))
-        raw <- (MedianSavings / adj_delay) * 100
-        minmax_0_100(raw)
-      }
+
     ) %>%
     select(Region, MainIsland, TotalBudget, MedianSavings, AvgDelay, HighDelayPct, EfficiencyScore) %>%
     arrange(desc(EfficiencyScore))
