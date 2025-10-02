@@ -75,3 +75,7 @@ build_report1 <- function(df) {
       EfficiencyScore
     )
 }
+
+report_regional_efficiency <- function(df) {
+  build_report1(df)
+}
