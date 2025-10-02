@@ -65,3 +65,65 @@ normalize_cli_paths <- function(args) {                       # return args with
   if (!is.null(lhs)) lhs else rhs
 }
 
+.read_cli_line <- function() {
+  line <- tryCatch(
+    readLines(con = stdin(), n = 1, warn = FALSE),
+    error = function(...) character(0)
+  )
+  if (length(line) == 0L) {
+    line <- tryCatch(readline(), error = function(...) character(0))
+  }
+  if (length(line) == 0L) {
+    return(NA_character_)
+  }
+  value <- line[[1L]]
+  if (is.na(value)) {
+    return(NA_character_)
+  }
+  value
+}
+
+print_menu <- function() {
+  cat("Select Language Implementation:\n")
+  cat("[1] Load the file\n")
+  cat("[2] Generate Reports\n\n")
+  cat("Enter choice: ")
+  flush.console()
+}
+
+read_choice <- function() {
+  input <- .read_cli_line()
+  if (is.na(input)) {
+    return(NA_integer_)
+  }
+  choice <- trimws(input)
+  if (identical(choice, "1") || identical(choice, "2")) {
+    cat(sprintf("Enter choice: %s\n", choice))
+    flush.console()
+    return(as.integer(choice))
+  }
+  if (!is.na(choice) && nzchar(choice)) {
+    cat(sprintf("Enter choice: %s\n", choice))
+    flush.console()
+  }
+  NA_integer_
+}
+
+prompt_back_to_menu <- function() {
+  cat("Back to Report Selection (Y/N): ")
+  flush.console()
+  input <- .read_cli_line()
+  if (is.na(input)) {
+    return(FALSE)
+  }
+  tolower(trimws(input)) == "y"
+}
+
+cli_exports <- list(
+  print_menu = print_menu,
+  read_choice = read_choice,
+  prompt_back_to_menu = prompt_back_to_menu
+)
+
+list2env(cli_exports, envir = globalenv())
+
