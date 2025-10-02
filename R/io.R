@@ -20,6 +20,46 @@ suppressPackageStartupMessages({                             # ensure clean cons
 
 
 
+# ---- lightweight path helpers -------------------------------------------------
+if (!exists("%||%", mode = "function")) {                     # local fallback when helpers not yet sourced
+  `%||%` <- function(lhs, rhs) if (!is.null(lhs)) lhs else rhs
+}
+
+.path_join <- function(...) {
+  parts <- list(...)
+  parts <- Filter(function(x) {
+    is.character(x) && length(x) == 1L && !is.na(x) && nzchar(x)
+  }, parts)
+  if (!length(parts)) return("")
+  do.call(file.path, parts)
+}
+
+summary_filename <- if (exists("SUMMARY_FILENAME_LABEL")) SUMMARY_FILENAME_LABEL else "summary.json"
+
+REPORT_FILES <- list(
+  r1 = "report1.csv",
+  r2 = "report2.csv",
+  r3 = "report3.csv",
+  summary = summary_filename %||% "summary.json"
+)
+
+path_report1 <- function(outdir) {
+  .path_join(outdir, REPORT_FILES$r1)
+}
+
+path_report2 <- function(outdir) {
+  .path_join(outdir, REPORT_FILES$r2)
+}
+
+path_report3 <- function(outdir) {
+  .path_join(outdir, REPORT_FILES$r3)
+}
+
+path_summary <- function(outdir) {
+  .path_join(outdir, REPORT_FILES$summary)
+}
+
+
 # ---- readr write compatibility (pre-2.0 vs >=2.0) ----------------------------
 .readr_has_escape <- function() {
   tryCatch(utils::packageVersion("readr") >= "2.0.0", error = function(...) FALSE)
@@ -118,7 +158,7 @@ write_summary_json <- function(x, outdir) {                  # JSON writer with 
   } else {
     dir <- outdir
     if (!dir.exists(dir)) ensure_outdir(dir)
-    path <- file.path(dir, "summary.json")
+    path <- path_summary(dir)
   }
 
   tmp <- tempfile(pattern = paste0(basename(path), "."), tmpdir = dir)
@@ -128,21 +168,21 @@ write_summary_json <- function(x, outdir) {                  # JSON writer with 
 }
 
 write_report1 <- function(df, outdir, fmt_opts = list()) {
-  path <- .path_join(outdir, REPORT_FILES$r1)
+  path <- path_report1(outdir)
   args <- c(list(df = df, path = path), fmt_opts)
   do.call(write_report_csv, args)
   path
 }
 
 write_report2 <- function(df, outdir, fmt_opts = list()) {
-  path <- .path_join(outdir, REPORT_FILES$r2)
+  path <- path_report2(outdir)
   args <- c(list(df = df, path = path), fmt_opts)
   do.call(write_report_csv, args)
   path
 }
 
 write_report3 <- function(df, outdir, fmt_opts = list()) {
-  path <- .path_join(outdir, REPORT_FILES$r3)
+  path <- path_report3(outdir)
   args <- c(list(df = df, path = path), fmt_opts)
   do.call(write_report_csv, args)
   path
