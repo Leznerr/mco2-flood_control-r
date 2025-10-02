@@ -65,3 +65,37 @@ normalize_cli_paths <- function(args) {                       # return args with
   if (!is.null(lhs)) lhs else rhs
 }
 
+print_menu <- function() {
+  cat("Select Language Implementation:\n")
+  cat("[1] Load the file\n")
+  cat("[2] Generate Reports\n\n")
+  cat("Enter choice: ")
+  flush.console()
+}
+
+read_choice <- function() {
+  x <- readline()
+  if (length(x) == 0L) {
+    return(NA_integer_)
+  }
+  x <- trimws(x)
+  if (identical(x, "1") || identical(x, "2")) {
+    cat(sprintf("Enter choice: %s\n", x))
+    return(as.integer(x))
+  }
+  if (nzchar(x)) {
+    cat(sprintf("Enter choice: %s\n", x))
+  }
+  return(NA_integer_)
+}
+
+prompt_back_to_menu <- function() {
+  cat("Back to Report Selection (Y/N): ")
+  flush.console()
+  x <- readline()
+  if (length(x) == 0L) {
+    return(FALSE)
+  }
+  tolower(trimws(x)) == "y"
+}
+
