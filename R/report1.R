@@ -76,3 +76,7 @@ build_report1 <- function(df) {
     ) %>%
     format_dataframe()
 }
+
+report_regional_efficiency <- function(df) {
+  build_report1(df)
+}
