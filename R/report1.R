@@ -20,24 +20,7 @@ suppressPackageStartupMessages({                             # quiet load for CL
 build_report1 <- function(df) {                               # build report 1 summary
   if (!is.data.frame(df)) stop("build_report1(): 'df' must be a data frame.")
 
-  summary_tbl <- df %>%
-    group_by(Region, MainIsland) %>%
-    summarise(
-      TotalBudget = safe_sum(ApprovedBudgetForContract),
-      MedianSavings = safe_median(CostSavings),
-      AvgDelay = safe_mean(CompletionDelayDays),
-      HighDelayPct = safe_mean(CompletionDelayDays > 30) * 100,
-      .groups = "drop"
-    ) %>%
-    ungroup()
 
-  report <- summary_tbl %>%
-    mutate(
-      EfficiencyScore = {
-        delay_denom <- ifelse(is.na(AvgDelay), NA_real_, pmax(AvgDelay, 1))
-        raw_score <- (MedianSavings / delay_denom) * 100
-        minmax_0_100(raw_score)
-      }
     ) %>%
     select(Region, MainIsland, TotalBudget, MedianSavings, AvgDelay, HighDelayPct, EfficiencyScore) %>%
     arrange(desc(EfficiencyScore))

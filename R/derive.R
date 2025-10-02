@@ -20,6 +20,47 @@ suppressPackageStartupMessages({                             # quiet load
   return(invisible(NULL))
 }
 
+derive_all <- function(df) {                                 # guardrails + derivations for downstream helpers
+  if (!is.data.frame(df)) {
+    stop("derive_all(): 'df' must be a data frame from clean_all().")
+  }
+
+  df2 <- df
+
+  if (!is.null(df2$ApprovedBudgetForContract)) {
+    bad_budget <- abs(df2$ApprovedBudgetForContract) > 1e12 &
+      is.finite(df2$ApprovedBudgetForContract)
+    bad_budget[is.na(bad_budget)] <- FALSE
+    if (any(bad_budget)) {
+      df2$ApprovedBudgetForContract[bad_budget] <- NA_real_
+      .log_info(
+        "Guardrail: ApprovedBudgetForContract implausible -> NA for %d rows.",
+        sum(bad_budget)
+      )
+    }
+  }
+
+  if (!is.null(df2$ContractCost)) {
+    bad_contract <- abs(df2$ContractCost) > 1e12 & is.finite(df2$ContractCost)
+    bad_contract[is.na(bad_contract)] <- FALSE
+    if (any(bad_contract)) {
+      df2$ContractCost[bad_contract] <- NA_real_
+      .log_info(
+        "Guardrail: ContractCost implausible -> NA for %d rows.",
+        sum(bad_contract)
+      )
+    }
+  }
+
+  df2 <- df2 %>%
+    mutate(
+      CostSavings = ApprovedBudgetForContract - ContractCost,
+      CompletionDelayDays = as.numeric(ActualCompletionDate - StartDate)
+    )
+
+  df2
+}
+
 derive_fields <- function(df) {                              # append CostSavings + CompletionDelayDays
   if (!is.data.frame(df)) {
     stop("derive_fields(): 'df' must be a data frame from clean_all().")
