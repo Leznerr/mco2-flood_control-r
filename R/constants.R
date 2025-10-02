@@ -7,22 +7,29 @@
 #             column descriptions referenced in `main.R` and `verify.R`.
 # ------------------------------------------------------------------------------
 
-INTERACTIVE_MENU_TITLE <- "Select Language Implementation:"
-INTERACTIVE_MENU_OPTIONS <- c(
+INTERACTIVE_REPORT_MENU_TITLE <- "Select language implementation:"
+INTERACTIVE_REPORT_MENU_OPTIONS <- c(
   "[1] Load the file",
   "[2] Generate Reports"
 )
+INTERACTIVE_REPORT_MENU_PROMPT <- "Enter choice:"
 
-INTERACTIVE_REPORT_HEADINGS <- c(
-  "Report 1: Regional Flood Mitigation Efficiency Summary",
-  "Report 2: Top Contractors Performance Ranking",
-  "Report 3: Annual Project Type Cost Overrun Trends"
+REPORT_PREVIEW_TITLE <- "Report Preview"
+REPORT_PREVIEW_RULE <- paste(rep("=", 72L), collapse = "")
+REPORT_PREVIEW_ORDER <- c("report1", "report2", "report3")
+REPORT_PREVIEW_HEADINGS <- list(
+  report1 = "Report 1 Preview — Regional Flood Mitigation Efficiency Summary",
+  report2 = "Report 2 Preview — Top Contractors Performance Ranking",
+  report3 = "Report 3 Preview — Annual Project Type Cost Overrun Trends"
 )
 
-INTERACTIVE_REPORT_COLUMNS <- list(
-  report1 = "Region, MainIsland, TotalApprovedBudget, MedianSavings, AvgDelay, Delay30Rate, EfficiencyScore",
-  report2 = "Contractor, NumProjects, TotalCost, AvgDelay, TotalSavings, ReliabilityIndex, RiskFlag",
-  report3 = "FundingYear, TypeOfWork, TotalProjects, AvgSavings, OverrunRate, YoYChange"
+INTERACTIVE_SUMMARY_TITLE <- "Summary Metrics (summary.json)"
+INTERACTIVE_SUMMARY_LABELS <- c(
+  total_projects = "Total Projects",
+  total_contractors = "Unique Contractors",
+  total_provinces = "Unique Provinces",
+  global_avg_delay = "Global Average Delay",
+  total_savings = "Total Savings"
 )
 
 SUMMARY_FILENAME_LABEL <- "summary.json"
