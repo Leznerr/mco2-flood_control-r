@@ -52,6 +52,16 @@ test_that("summary aggregates scalar metrics", {
   expect_equal(payload$total_provinces, 2)
   expect_equal(payload$global_avg_delay, 15)
   expect_equal(payload$total_savings, 250)
+
+  df_with_na <- tibble(
+    Contractor = c("A", "B", NA_character_),
+    Province = c("P1", "P2", NA_character_),
+    CompletionDelayDays = c(10, 20, 30),
+    CostSavings = c(100, 200, 300)
+  )
+  payload_with_na <- build_summary(df_with_na)
+  expect_equal(payload_with_na$total_contractors, 2)
+  expect_equal(payload_with_na$total_provinces, 2)
 })
 
 test_that("summary total_savings is finite or NA but never absurd", {

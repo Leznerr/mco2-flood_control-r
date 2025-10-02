@@ -33,8 +33,8 @@ build_summary <- function(df) {                              # assemble scalar m
 
   list(
     total_projects = nrow(df),
-    total_contractors = dplyr::n_distinct(df$Contractor),
-    total_provinces = dplyr::n_distinct(df$Province),
+    total_contractors = dplyr::n_distinct(df$Contractor, na.rm = TRUE),
+    total_provinces = dplyr::n_distinct(df$Province, na.rm = TRUE),
     global_avg_delay = mean(df$CompletionDelayDays, na.rm = TRUE),
     total_savings = total_savings
   )
