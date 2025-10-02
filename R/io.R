@@ -56,7 +56,15 @@ path_report3 <- function(outdir) {
 }
 
 path_summary <- function(outdir) {
-  .path_join(outdir, REPORT_FILES$summary)
+  if (missing(outdir) || !is.character(outdir) || length(outdir) != 1L || is.na(outdir)) {
+    stop("path_summary(): 'outdir' must be a non-NA character scalar.")
+  }
+  looks_like_file <- grepl("\\.json$", outdir, ignore.case = TRUE)
+  if (looks_like_file) {
+    outdir
+  } else {
+    .path_join(outdir, REPORT_FILES$summary)
+  }
 }
 
 
@@ -189,6 +197,7 @@ write_report3 <- function(df, outdir, fmt_opts = list()) {
 }
 
 write_summary_outdir <- function(x, outdir) {
-  write_summary_json(x, outdir)
+  path <- path_summary(outdir)
+  write_summary_json(x, path)
 }
 
