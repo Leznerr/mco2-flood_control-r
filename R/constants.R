@@ -8,7 +8,6 @@
 # ------------------------------------------------------------------------------
 
 
-)
 INTERACTIVE_REPORT_MENU_PROMPT <- "Enter choice:"
 
 REPORT_PREVIEW_TITLE <- "Report Preview"
