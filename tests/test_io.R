@@ -60,13 +60,3 @@ test_that("write_summary_json writes pretty auto-unboxed scalars", {
   })
 })
 
-test_that("write_csv_compat works with current readr", {
-  source("R/io.R")
-  df <- data.frame(a = c(1, 2), b = c('x', 'y'))
-  tmp <- tempfile(fileext = ".csv")
-  on.exit(unlink(tmp), add = TRUE)
-  expect_silent(write_csv_compat(df, file = tmp, na = "", col_names = TRUE, delim = ",", progress = FALSE))
-  back <- readr::read_csv(tmp, show_col_types = FALSE)
-  expect_equal(nrow(back), 2L)
-  expect_true(all(names(back) == c("a","b")))
-})

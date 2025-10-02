@@ -4,8 +4,8 @@
 #             creation, CSV + JSON writing with deterministic formatting).
 # Contract  :
 #   - ensure_outdir(path) creates directory recursively if it does not exist.
-#   - write_report_csv(df, path, exclude = NULL, exclude_regex = NULL) applies
-#     format_dataframe() and writes atomically via temp file rename.
+#   - write_report_csv(df, path) applies format_dataframe() with standard
+#     presentation options and writes atomically via temp file rename.
 #   - write_summary_json(x, path) serialises to the provided JSON path using
 #     jsonlite::write_json with pretty formatting and auto_unbox semantics
 #     (atomic write as well).
@@ -37,9 +37,9 @@ if (!exists("%||%", mode = "function")) {                     # local fallback w
 }
 
 REPORT_FILES <- list(                                           # canonical filenames for exports
-  report1 = "report1.csv",
-  report2 = "report2.csv",
-  report3 = "report3.csv",
+  report1 = "report1_regional_summary.csv",
+  report2 = "report2_contractor_ranking.csv",
+  report3 = "report3_annual_trends.csv",
   summary = "summary.json"
 )
 
@@ -86,28 +86,13 @@ io_exports <- list(                                             # make helpers v
 list2env(io_exports, envir = globalenv())
 
 
-# ---- readr write compatibility (pre-2.0 vs >=2.0) ----------------------------
-.readr_has_escape <- function() {
-  tryCatch(utils::packageVersion("readr") >= "2.0.0", error = function(...) FALSE)
-}
-
-write_csv_compat <- function(x, file, na = "", col_names = TRUE, delim = ",", progress = FALSE) {
-  # Use write_delim for both to control 'escape'/'quote_escape' explicitly
-  if (.readr_has_escape()) {
-    # readr >= 2.0.0: use 'escape'
-    readr::write_delim(
-      x, file = file, delim = delim, na = na,
-      col_names = col_names, progress = progress,
-      escape = "double"
-    )
-  } else {
-    # readr < 2.0.0: use 'quote_escape'
-    readr::write_delim(
-      x, file = file, delim = delim, na = na,
-      col_names = col_names, progress = progress,
-      quote_escape = "double"
-    )
-  }
+format_for_export <- function(df) {
+  format_dataframe(
+    df,
+    exclude = c("FundingYear", "Year", "N", "NumProjects"),
+    comma_strings = TRUE,
+    digits = 2
+  )
 }
 
 .atomic_replace <- function(tmp, path, label) {              # helper to replace destination atomically with rollback
@@ -146,27 +131,16 @@ ensure_outdir <- function(path) {                            # create directory 
   invisible(path)
 }
 
-write_report_csv <- function(df,
-                             path,
-                             exclude = NULL,
-                             exclude_regex = NULL,
-                             comma_strings = TRUE,
-                             digits = 2) {
+write_report_csv <- function(df, path) {
   if (!is.data.frame(df)) stop("write_report_csv(): 'df' must be a data frame.")
   if (missing(path) || !is.character(path) || length(path) != 1L || is.na(path)) {
     stop("write_report_csv(): 'path' must be a non-NA character scalar.")
   }
   dir <- dirname(path)
   if (!dir.exists(dir)) ensure_outdir(dir)
-  formatted <- format_dataframe(
-    df,
-    exclude = exclude,
-    exclude_regex = exclude_regex,
-    comma_strings = comma_strings,
-    digits = digits
-  )
+  formatted <- format_for_export(df)
   tmp <- tempfile(pattern = paste0(basename(path), "."), tmpdir = dir)
-  write_csv_compat(formatted, file = tmp, na = "", col_names = TRUE, delim = ",", progress = FALSE)
+  readr::write_csv(formatted, file = tmp, na = "")
   .atomic_replace(tmp, path, "write_report_csv()")
   invisible(path)
 }
@@ -185,24 +159,21 @@ write_summary_json <- function(x, path) {                    # JSON writer with 
   path
 }
 
-write_report1 <- function(df, outdir, fmt_opts = list()) {
+write_report1 <- function(df, outdir) {
   path <- path_report1(outdir)
-  args <- c(list(df = df, path = path), fmt_opts)
-  do.call(write_report_csv, args)
+  write_report_csv(df, path)
   path
 }
 
-write_report2 <- function(df, outdir, fmt_opts = list()) {
+write_report2 <- function(df, outdir) {
   path <- path_report2(outdir)
-  args <- c(list(df = df, path = path), fmt_opts)
-  do.call(write_report_csv, args)
+  write_report_csv(df, path)
   path
 }
 
-write_report3 <- function(df, outdir, fmt_opts = list()) {
+write_report3 <- function(df, outdir) {
   path <- path_report3(outdir)
-  args <- c(list(df = df, path = path), fmt_opts)
-  do.call(write_report_csv, args)
+  write_report_csv(df, path)
   path
 }
 
