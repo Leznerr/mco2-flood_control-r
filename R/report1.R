@@ -53,10 +53,10 @@ build_report1 <- function(df) {
   summary_tbl <- df %>%
     dplyr::group_by(Region, MainIsland) %>%
     dplyr::summarise(
-      TotalBudget = safe_sum(ApprovedBudgetForContract),
+      TotalApprovedBudget = safe_sum(ApprovedBudgetForContract),
       MedianSavings = safe_median(CostSavings),
       AvgDelay = safe_mean(CompletionDelayDays),
-      HighDelayPct = safe_mean(CompletionDelayDays > 30) * 100,
+      Delay30Rate = safe_mean(CompletionDelayDays > 30) * 100,
       .groups = "drop"
     )
 
@@ -68,11 +68,10 @@ build_report1 <- function(df) {
     dplyr::select(
       Region,
       MainIsland,
-      TotalBudget,
+      TotalApprovedBudget,
       MedianSavings,
       AvgDelay,
-      HighDelayPct,
+      Delay30Rate,
       EfficiencyScore
-    ) %>%
-    format_dataframe()
+    )
 }
