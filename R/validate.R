@@ -86,7 +86,7 @@ validate_schema <- function(df) {
   has_synonym_coords <- all(c("ProjectLatitude", "ProjectLongitude") %in% nms)
   if (!has_canonical_coords && !has_synonym_coords) {
     stop(
-      "validate_schema(): missing required columns: Latitude, Longitude.",
+      "validate_schema(): missing coordinates (Latitude/Longitude or ProjectLatitude/ProjectLongitude).",
       call. = FALSE
     )
   }
