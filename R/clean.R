@@ -42,16 +42,20 @@ suppressPackageStartupMessages({                                           # sup
 
 # ----------------------------- Helper functions -------------------------------
 
-.parse_date_any <- function(x) {                                           # parse common gov/date formats to Date
-  dt <- suppressWarnings(                                                  # suppress per-element parse warnings (we log totals)
-    lubridate::parse_date_time(                                           # use multi-order parser for resilience
-      x = x,                                                              # input vector (character or factor/Date)
-      orders = c("ymd","mdy","dmy","Ymd HMS","mdy HMS","dmy HMS","Ymd HM","mdy HM","dmy HM"), # common layouts
-      tz = "UTC",                                                         # deterministic timezone for POSIX parsing
-      exact = FALSE                                                       # allow flexible matching across orders
-    )
-  )
-  as.Date(dt)                                                             # coerce POSIXct -> Date (drops time component)
+.parse_date_any <- function(x) {                                           # parse ISO first, then fallback to %m/%d/%Y
+  if (inherits(x, "Date")) {                                              # already a Date object -> return as-is
+    return(x)
+  }
+  tokens_na <- c("", "NA", "N/A", "null", "NULL")                     # tokens treated as missing
+  chr <- trimws(as.character(x))                                           # normalize whitespace around values
+  chr[chr %in% tokens_na] <- NA_character_                                 # set NA tokens explicitly to NA
+  primary <- suppressWarnings(lubridate::ymd(chr))                         # ISO-8601 first pass (YYYY-MM-DD)
+  need_fallback <- is.na(primary) & !is.na(chr)                            # identify entries needing fallback parse
+  if (any(need_fallback)) {                                                # attempt %m/%d/%Y fallback where needed
+    fallback <- suppressWarnings(lubridate::mdy(chr[need_fallback]))
+    primary[need_fallback] <- fallback
+  }
+  primary                                                                  # return Date vector (lubridate::ymd yields Date)
 }
 
 # ---- Strict money parser (Php text -> numeric pesos) -------------------------
@@ -143,35 +147,27 @@ clean_all <- function(df) {                                                # def
   }
 
   orig_cols <- names(df)                                                    # capture canonicalized column order for restoration
-
-  ..na_before <- vapply(                                                    # snapshot NA counts before cleaning
-    c(
-      "Region","MainIsland","Province","FundingYear","TypeOfWork",
-      "StartDate","ActualCompletionDate","ApprovedBudgetForContract",
-      "ContractCost","Contractor","Latitude","Longitude"
-    ),
-    function(n) sum(is.na(df[[n]])),
-    integer(1)
-  )
+  na_tokens <- c("", "NA", "N/A", "null", "NULL")                       # shared NA tokens for parsing checks
+  money_cols <- c("ApprovedBudgetForContract", "ContractCost")            # columns requiring currency parsing
+  money_inputs <- lapply(money_cols, function(col) {                        # cache normalized originals for anomaly counts
+    vals <- if (col %in% names(df)) df[[col]] else rep(NA, nrow(df))
+    chr <- trimws(as.character(vals))
+    chr[chr %in% na_tokens] <- NA_character_
+    chr
+  })
+  names(money_inputs) <- money_cols
 
   # ---- Type coercions & text normalization (idempotent) ----------------------
   df1 <- df %>%                                                            # start a new pipeline to avoid surprise mutation
     mutate(
-      # Dates: robust parse to Date (UTC-based, drop time)
-      StartDate            = .parse_date_any(StartDate),                    # parse StartDate to Date
-      ActualCompletionDate = .parse_date_any(ActualCompletionDate),         # parse ActualCompletionDate to Date
-
-      # Money: parse currency-like strings and commas to numeric
+      across(where(is.character), stringr::str_squish),                    # trim whitespace and collapse runs for all text
+      StartDate            = .parse_date_any(StartDate),                    # parse StartDate to Date (ISO + m/d/Y fallback)
+      ActualCompletionDate = .parse_date_any(ActualCompletionDate),         # parse ActualCompletionDate similarly
       ApprovedBudgetForContract = .parse_money_safely(.data$ApprovedBudgetForContract), # numeric ABC via strict parser
       ContractCost              = .parse_money_safely(.data$ContractCost),  # numeric contract cost
-
-      # Year: integer FundingYear (handles "2021", 2021.0, "FY2021", etc.)
       FundingYear = .as_integer_safely(.data$FundingYear),                  # integer or NA if unparsable
-
-      # Geo: numeric lat/lon first (NA on non-numeric), then plausibility bounds
       Latitude  = .as_numeric_safely(Latitude),                             # numeric latitude or NA
       Longitude = .as_numeric_safely(Longitude),                            # numeric longitude or NA
-      # Text normalization: geographic/party labels Title Case; work type trim only
       Region     = .title_case_squish(Region),                              # normalize Region naming
       MainIsland = .title_case_squish(MainIsland),                          # normalize MainIsland
       Province   = .title_case_squish(Province),                            # normalize Province naming
@@ -187,53 +183,46 @@ clean_all <- function(df) {                                                # def
         max_str <- if (is.finite(max_v)) format(max_v, scientific = FALSE) else "NA"
         c(min_str, max_str)
       }
+      anomalies <- vapply(names(money_inputs), function(col) {
+        inputs <- money_inputs[[col]]
+        observed <- !is.na(inputs)
+        sum(is.na(.[[col]]) & observed)
+      }, integer(1))
       budget_range <- range_formatter(.$ApprovedBudgetForContract)
       cost_range   <- range_formatter(.$ContractCost)
-      if (exists("log_info", mode = "function")) {
-        log_info("Money ranges | Budget: [%s, %s] | Cost: [%s, %s]",
-                 budget_range[1], budget_range[2], cost_range[1], cost_range[2])
-      } else {
-        message(sprintf("[INFO] Money ranges | Budget: [%s, %s] | Cost: [%s, %s]",
-                        budget_range[1], budget_range[2], cost_range[1], cost_range[2]))
-      }
+      .log_info(
+        "Money parse anomalies: %s",
+        paste(sprintf("%s=%d", names(anomalies), anomalies), collapse = ", ")
+      )
+      .log_info(
+        "Money ranges | Budget: [%s, %s] | Cost: [%s, %s]",
+        budget_range[1], budget_range[2], cost_range[1], cost_range[2]
+      )
       b <- .bound_latlon(.$Latitude, .$Longitude)                           # compute bounded lat/lon
       mutate(., Latitude = b$lat, Longitude = b$lon)                        # replace with bounded versions
     }
 
   # ---- Province-level mean geolocation (for conservative imputation) ---------
-  complete_coords <- df1 %>%                                               # restrict to rows with complete coordinate pairs
-    filter(!is.na(Latitude) & !is.na(Longitude))                           # exclude any partial geocoordinate entries
-
-  prov_means <- complete_coords %>%                                        # compute province means using only observed pairs
-    group_by(Province) %>%                                                 # group by normalized Province
+  prov_means <- df1 %>%                                                    # compute province means using available coordinates
+    filter(!is.na(Province)) %>%
+    group_by(Province) %>%
     summarise(
-      mean_lat = mean(Latitude),                                           # province mean latitude (complete cases only)
-      mean_lon = mean(Longitude),                                          # province mean longitude (complete cases only)
-      .groups  = "drop"                                                    # drop grouping to avoid downstream carry-over
+      mean_lat = if (all(is.na(Latitude))) NA_real_ else mean(Latitude, na.rm = TRUE),
+      mean_lon = if (all(is.na(Longitude))) NA_real_ else mean(Longitude, na.rm = TRUE),
+      .groups  = "drop"
     )
 
-  # ---- Impute BOTH coordinates only when BOTH are missing --------------------
+  # ---- Impute coordinates when missing, using province means ----------------
   df2 <- df1 %>%                                                           # continue cleaning pipeline
+    left_join(prov_means, by = "Province") %>%                             # attach province-level means
     mutate(
-      .both_na = is.na(Latitude) & is.na(Longitude)                         # flag rows with both coordinates missing
+      Latitude  = ifelse(is.na(Latitude)  & !is.na(mean_lat), mean_lat, Latitude),
+      Longitude = ifelse(is.na(Longitude) & !is.na(mean_lon), mean_lon, Longitude)
     ) %>%
-    left_join(prov_means, by = "Province") %>%                             # attach filtered province-level means
-    mutate(
-      Latitude  = ifelse(.both_na & !is.na(mean_lat) & !is.na(mean_lon),    # if both missing and province means exist
-                         mean_lat,                                          #   impute latitude with province mean
-                         Latitude),                                         # else keep original
-      Longitude = ifelse(.both_na & !is.na(mean_lat) & !is.na(mean_lon),    # if both missing and province means exist
-                         mean_lon,                                          #   impute longitude with province mean
-                         Longitude)                                         # else keep original
-    ) %>%
-    select(-mean_lat, -mean_lon, -.both_na)                                 # drop helper columns to restore schema
+    select(-mean_lat, -mean_lon)                                           # drop helper columns to restore schema
 
-  remaining_geo_na <- sum(is.na(df2$Latitude) & is.na(df2$Longitude))
-  if (exists("log_info", mode = "function")) {
-    log_info("Post-imputation geo gaps: %d rows still lack coordinates", remaining_geo_na)
-  } else {
-    message(sprintf("[INFO] Post-imputation geo gaps: %d rows still lack coordinates", remaining_geo_na))
-  }
+  remaining_geo_na <- sum(is.na(df2$Latitude) | is.na(df2$Longitude))
+  .log_info("Post-imputation geo gaps (any missing coordinate): %d", remaining_geo_na)
 
   df3 <- df2 %>%
     filter(
@@ -243,50 +232,7 @@ clean_all <- function(df) {                                                # def
       !is.na(ContractCost)
     )
   dropped_core <- nrow(df2) - nrow(df3)
-  if (dropped_core > 0) {
-    if (exists("log_warn", mode = "function")) {
-      log_warn("Dropped %d rows missing core schedule/cost fields after cleaning.", dropped_core)
-    } else {
-      message(sprintf("[WARN] Dropped %d rows missing core schedule/cost fields after cleaning.", dropped_core))
-    }
-  }
-
-  # ---- NA reduction logging (compact; robust; comma-free) ----------------------
-  cols_track <- c(
-    "Region","MainIsland","Province","FundingYear","TypeOfWork",
-    "StartDate","ActualCompletionDate","ApprovedBudgetForContract",
-    "ContractCost","Contractor","Latitude","Longitude"
-  )
-
-  if (!exists("..na_before", inherits = FALSE)) {
-    ..na_before <- vapply(cols_track, function(n) sum(is.na(df[[n]])), integer(1))
-  }
-
-  na_after <- vapply(cols_track, function(n) sum(is.na(df3[[n]])), integer(1))
-  na_delta <- ..na_before - na_after
-
-  if (exists("log_info", mode = "function")) {
-    log_info("NA reductions by column: %s",
-             paste(sprintf("%s=%+d", names(na_delta), na_delta), collapse = ", "))
-  } else {
-    message(sprintf("[INFO] NA reductions by column: %s",
-                    paste(sprintf("%s=%+d", names(na_delta), na_delta), collapse = ", ")))
-  }
-
-  max_formatter <- function(v) {
-    if (all(is.na(v))) return("NA")
-    max_v <- suppressWarnings(max(abs(v), na.rm = TRUE))
-    if (is.finite(max_v)) format(max_v, scientific = FALSE) else "NA"
-  }
-  max_budget <- max_formatter(df3$ApprovedBudgetForContract)
-  max_cost   <- max_formatter(df3$ContractCost)
-  if (exists("log_info", mode = "function")) {
-    log_info("Max |Budget|=%s |Cost|=%s", max_budget, max_cost)
-  } else {
-    message(sprintf("[INFO] Max |Budget|=%s |Cost|=%s", max_budget, max_cost))
-  }
-
-  rm(list="..na_before", inherits = FALSE)
+  .log_info("Rows dropped after core field enforcement: %d", dropped_core)
 
   # ---- Postconditions: column integrity (order and set) ----------------------
   if (!identical(names(df3), orig_cols)) {                                  # ensure we didn't change names/order inadvertently
