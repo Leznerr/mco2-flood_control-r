@@ -3,7 +3,7 @@
 # Purpose : Schema/type/invariant checks for the DPWH flood-control CSV.
 # Contract: validate_schema(df) -> invisible(TRUE) or stop() on violations
 #           assert_year_filter(df, allowed_years=2021:2023) -> invisible(TRUE)
-# Notes   : Accepts either {Latitude,Longitude} OR {ProjectLatitude,ProjectLongitude}.
+# Notes   : Strictly enforces presence of canonical coordinate columns.
 #           No value transformations here; only structure/invariants.
 # ------------------------------------------------------------------------------
 
@@ -20,11 +20,6 @@ assert_is_df <- function(x, var = deparse(substitute(x))) {
     )
   }
   invisible(TRUE)
-}
-
-# Helper: does ANY pair in a matrix of pairs exist fully in `nms`? ------------
-.has_pair <- function(nms, pairs) {
-  any(apply(pairs, 1L, function(p) all(p %in% nms)))
 }
 
 #' Validate the raw schema (presence, duplicates, non-empty).
@@ -47,8 +42,15 @@ validate_schema <- function(df) {
     stop("validate_schema(): input has zero columns.", call. = FALSE)
   }
 
-  if (nrow(df) == 0L) {
+  row_count <- nrow(df)
+  if (row_count == 0L) {
     stop("validate_schema(): input has zero rows.", call. = FALSE)
+  }
+
+  if (exists("log_info", mode = "function")) {
+    log_info("validate_schema(): rows=%d", row_count)
+  } else {
+    message(sprintf("validate_schema(): rows=%d", row_count))
   }
 
   # No duplicated headers -----------------------------------------------------
@@ -63,33 +65,21 @@ validate_schema <- function(df) {
     )
   }
 
-  # Strict required columns (excluding coordinates, which accept synonyms) ----
-  required_strict <- c(
+  # Strict required columns ---------------------------------------------------
+  required_cols <- c(
     "Region", "MainIsland", "Province",
     "FundingYear", "TypeOfWork",
     "StartDate", "ActualCompletionDate",
     "ApprovedBudgetForContract", "ContractCost",
-    "Contractor"
+    "Contractor", "Latitude", "Longitude"
   )
-  missing_strict <- setdiff(required_strict, nms)
-  if (length(missing_strict) > 0L) {
+  missing_required <- setdiff(required_cols, nms)
+  if (length(missing_required) > 0L) {
     stop(
       sprintf(
         "validate_schema(): missing required columns: %s.",
-        paste(missing_strict, collapse = ", ")
+        paste(missing_required, collapse = ", ")
       ),
-      call. = FALSE
-    )
-  }
-
-  # Coordinates: accept canonical OR synonyms; fail only if neither pair exists
-  latlon_pairs <- rbind(
-    c("Latitude", "Longitude"),
-    c("ProjectLatitude", "ProjectLongitude")
-  )
-  if (!.has_pair(nms, latlon_pairs)) {
-    stop(
-      "validate_schema(): missing coordinates; expected either {Latitude,Longitude} or {ProjectLatitude,ProjectLongitude}.",
       call. = FALSE
     )
   }
