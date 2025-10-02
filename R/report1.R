@@ -9,11 +9,24 @@
 #             schema ordering and formatted values).
 # ------------------------------------------------------------------------------
 
+.load_utils_format <- function() {
+  caller <- sys.frame(1)
+  ofile <- caller$ofile
+  if (is.null(ofile)) {
+    stop(".load_utils_format(): unable to determine the calling file location.")
+  }
+  utils_path <- file.path(normalizePath(dirname(ofile)), "utils_format.R")
+  if (!file.exists(utils_path)) {
+    stop(sprintf(".load_utils_format(): expected helper file at '%s' but it was not found.", utils_path))
+  }
+  sys.source(utils_path, envir = parent.frame())
+}
+
+.load_utils_format()
+
 suppressPackageStartupMessages({                             # quiet load for tidy verbs
   library(dplyr)
 })
-
-
 
 build_report1 <- function(df) {
   stopifnot(is.data.frame(df))
