@@ -49,8 +49,6 @@ validate_schema <- function(df) {
 
   if (exists("log_info", mode = "function")) {
     log_info("validate_schema(): rows=%d", row_count)
-  } else {
-    message(sprintf("validate_schema(): rows=%d", row_count))
   }
 
   # No duplicated headers -----------------------------------------------------
