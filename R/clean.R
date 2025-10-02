@@ -243,3 +243,30 @@ clean_all <- function(df) {                                                # def
   # ---- Return cleaned dataframe ----------------------------------------------
   return(df3)                                                               # yield standardized, conservatively-imputed table
 }
+
+#' Filter a dataframe to a specific window of funding years.
+#'
+#' @param df data.frame/tibble containing a FundingYear column.
+#' @param years integer/numeric vector of years to keep (defaults to 2021:2023).
+#' @return subset of `df` restricted to the specified FundingYear values.
+filter_window <- function(df, years = 2021:2023) {
+  if (!is.data.frame(df)) {
+    stop("filter_window(): 'df' must be a data.frame/tibble.")
+  }
+  if (!("FundingYear" %in% names(df))) {
+    stop("filter_window(): 'df' must contain a 'FundingYear' column.")
+  }
+  if (!(is.numeric(years) || is.integer(years))) {
+    stop("filter_window(): 'years' must be numeric or integer.")
+  }
+
+  years <- unique(as.integer(years))
+  years <- years[!is.na(years)]
+
+  if (length(years) == 0) {
+    return(df[0, , drop = FALSE])
+  }
+
+  df %>%
+    dplyr::filter(.data$FundingYear %in% years)
+}
