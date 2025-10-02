@@ -19,7 +19,6 @@ build_summary <- function(df) {                              # assemble scalar m
   if (!is.data.frame(df)) stop("build_summary(): 'df' must be a data frame.")
 
   total_savings <- sum(df$CostSavings, na.rm = TRUE)
-  total_savings_guarded <- total_savings
   limit <- 1e13
 
   if (!is.finite(total_savings) || abs(total_savings) > limit) {
@@ -34,7 +33,7 @@ build_summary <- function(df) {                              # assemble scalar m
       warning(warn_msg)
     }
 
-    total_savings_guarded <- NA_real_
+    total_savings <- NA_real_
   }
 
   list(
@@ -42,7 +41,7 @@ build_summary <- function(df) {                              # assemble scalar m
     total_contractors = dplyr::n_distinct(df$Contractor, na.rm = TRUE),
     total_provinces = dplyr::n_distinct(df$Province, na.rm = TRUE),
     global_avg_delay = mean(df$CompletionDelayDays, na.rm = TRUE),
-    total_savings = total_savings_guarded
+    total_savings = total_savings
   )
 }
 
