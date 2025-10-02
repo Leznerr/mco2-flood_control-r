@@ -1,8 +1,6 @@
 # utils_cli.R
 # ------------------------------------------------------------------------------
-# Purpose   : Provide CLI helpers for argument parsing and interactive menu
-#             handling. The menu helpers intentionally rely only on base R so
-#             that they work consistently across platforms and terminals.
+
 # ------------------------------------------------------------------------------
 
 suppressPackageStartupMessages({
@@ -69,36 +67,15 @@ normalize_cli_paths <- function(args) {
   value
 }
 
+
 print_menu <- function() {
   cat("Select Language Implementation:\n")
   cat("[1] Load the file\n")
   cat("[2] Generate Reports\n\n")
   cat("Enter choice: ")
-  flush.console()
-}
 
-read_choice <- function() {
-  input <- .read_cli_line()
-  if (is.na(input)) {
-    return(NA_integer_)
-  }
-  choice <- trimws(input)
-  if (nzchar(choice)) {
-    cat(sprintf("Enter choice: %s\n", choice))
-    flush.console()
-  }
-  if (identical(choice, "1") || identical(choice, "2")) {
-    return(as.integer(choice))
-  }
-  NA_integer_
 }
 
 prompt_back_to_menu <- function() {
   cat("Back to Report Selection (Y/N): ")
-  flush.console()
-  input <- .read_cli_line()
-  if (is.na(input)) {
-    return(FALSE)
-  }
-  tolower(trimws(input)) == "y"
-}
+
