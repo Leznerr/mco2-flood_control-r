@@ -53,11 +53,16 @@ path_report3 <- function(outdir) {
   .path_join(outdir, REPORT_FILES$report3)
 }
 
+path_summary_json <- function(outdir) {
+  .path_join(outdir, REPORT_FILES$summary)
+}
+
 path_summary <- function(outdir) {
-  if (missing(outdir) || !is.character(outdir) || length(outdir) != 1L || is.na(outdir)) {
+  path <- path_summary_json(outdir)
+  if (!length(path)) {
     stop("path_summary(): 'outdir' must be a non-NA character scalar.")
   }
-  file.path(outdir, REPORT_FILES$summary)
+  path
 }
 
 io_exports <- list(                                             # make helpers visible when sourced locally
@@ -66,6 +71,7 @@ io_exports <- list(                                             # make helpers v
   path_report1 = path_report1,
   path_report2 = path_report2,
   path_report3 = path_report3,
+  path_summary_json = path_summary_json,
   path_summary = path_summary
 )
 
@@ -196,7 +202,8 @@ write_report3 <- function(df, outdir, fmt_opts = list()) {
 }
 
 write_summary_outdir <- function(x, outdir) {
-  path <- path_summary(outdir)
+  path <- path_summary_json(outdir)
   write_summary_json(x, path)
+  path
 }
 
