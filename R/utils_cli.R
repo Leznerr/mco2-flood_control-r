@@ -1,16 +1,12 @@
 # utils_cli.R
 # ------------------------------------------------------------------------------
-# Purpose   : Provide command-line helpers for parsing CLI arguments and driving
-#             the interactive report menu using base R I/O utilities.
-# ------------------------------------------------------------------------------
+------------------------------------------------------------
 
 suppressPackageStartupMessages({
   library(optparse)
 })
 
-`%||%` <- function(lhs, rhs) {
-  if (!is.null(lhs)) lhs else rhs
-}
+
 
 build_cli <- function() {
   option_list <- list(
@@ -24,6 +20,7 @@ build_cli <- function() {
 
   OptionParser(option_list = option_list, usage = "%prog --input <file> [--outdir <dir>]")
 }
+
 
 validate_cli_args <- function(args) {
   if (is.null(args$input) || is.na(args$input) || !nzchar(args$input)) {
@@ -56,43 +53,16 @@ normalize_cli_paths <- function(args) {
   args
 }
 
-.read_cli_line <- function() {
-  line <- readLines(con = stdin(), n = 1, warn = FALSE)
-  if (!length(line)) {
-    return(NA_character_)
-  }
-  line[[1L]]
-}
 
 print_menu <- function() {
   cat("Select Language Implementation:\n")
   cat("[1] Load the file\n")
   cat("[2] Generate Reports\n\n")
   cat("Enter choice: ")
-  flush.console()
-}
 
-read_choice <- function() {
-  x <- .read_cli_line()
-  if (is.na(x)) {
-    return(NA_integer_)
-  }
-  x <- trimws(x)
-  if (identical(x, "1") || identical(x, "2")) {
-    cat(sprintf("Enter choice: %s\n", x))
-    return(as.integer(x))
-  }
-  NA_integer_
 }
 
 prompt_back_to_menu <- function() {
   cat("Back to Report Selection (Y/N): ")
-  flush.console()
-  x <- .read_cli_line()
-  if (is.na(x)) {
-    return(FALSE)
-  }
-  tolower(trimws(x)) == "y"
-}
 
 
