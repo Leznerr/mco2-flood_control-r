@@ -7,8 +7,7 @@
 #             column descriptions referenced in `main.R` and `verify.R`.
 # ------------------------------------------------------------------------------
 
-INTERACTIVE_REPORT_MENU_TITLE <- "Report Selection Menu"
-INTERACTIVE_REPORT_MENU_OPTIONS <- c("[1] Load the file", "[2] Generate Reports")
+
 INTERACTIVE_REPORT_MENU_PROMPT <- "Enter choice:"
 
 REPORT_PREVIEW_TITLE <- "Report Preview"
