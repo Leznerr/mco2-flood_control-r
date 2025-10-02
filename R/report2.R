@@ -16,7 +16,10 @@ build_report2 <- function(df) {                               # build report 2 c
   df %>%
     dplyr::group_by(Contractor) %>%
     dplyr::summarise(
-
+      TotalCost = sum(ContractCost, na.rm = TRUE),
+      NumProjects = dplyr::n(),
+      AvgDelay = mean(CompletionDelayDays, na.rm = TRUE),
+      TotalSavings = sum(CostSavings, na.rm = TRUE),
       .groups = "drop"
     ) %>%
     dplyr::mutate(
@@ -27,7 +30,7 @@ build_report2 <- function(df) {                               # build report 2 c
           (1 - (AvgDelay / 90)) * (TotalSavings / pmax(TotalCost, 1)) * 100
         )
       ),
-
+      RiskFlag = ifelse(is.na(ReliabilityIndex) | ReliabilityIndex < 50, "High Risk", "Low Risk")
     ) %>%
     dplyr::filter(NumProjects >= 5) %>%
     dplyr::arrange(dplyr::desc(TotalCost)) %>%
@@ -43,5 +46,8 @@ build_report2 <- function(df) {                               # build report 2 c
       ReliabilityIndex,
       RiskFlag
     )
+}
 
+report_contractor_ranking <- function(df) {
+  build_report2(df)
 }
