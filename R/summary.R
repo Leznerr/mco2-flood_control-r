@@ -18,14 +18,13 @@ suppressPackageStartupMessages({                             # quiet load
 build_summary <- function(df) {                              # assemble scalar metrics for JSON
   if (!is.data.frame(df)) stop("build_summary(): 'df' must be a data frame.")
 
-  total_savings_raw <- sum(df$CostSavings, na.rm = TRUE)
+  total_savings <- sum(df$CostSavings, na.rm = TRUE)
 
-  total_savings <- total_savings_raw
-  if (!is.finite(total_savings_raw) || abs(total_savings_raw) > 1e13) {
+  if (!is.finite(total_savings) || abs(total_savings) > 1e13) {
     if (exists("log_warn", mode = "function")) {
       log_warn(
         "CostSavings sum implausible (%s) -> NA.",
-        format(total_savings_raw, scientific = TRUE)
+        format(total_savings, scientific = TRUE)
       )
     }
     total_savings <- NA_real_
