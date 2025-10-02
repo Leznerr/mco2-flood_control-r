@@ -67,17 +67,6 @@ format_summary_value <- function(value) {
 }
 
 run_interactive_mode <- function(args) {
-  cat(INTERACTIVE_LANGUAGE_PROMPT)
-  choice <- trimws(readline())
-  while (!identical(choice, "1")) {
-    if (!nzchar(choice)) {
-      cat(INTERACTIVE_LANGUAGE_PROMPT)
-    } else {
-      cat("Invalid choice. Please enter 1 for the R implementation.\n")
-      cat(INTERACTIVE_LANGUAGE_PROMPT)
-    }
-    choice <- trimws(readline())
-  }
 
   dataset <- NULL
 

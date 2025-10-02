@@ -7,12 +7,7 @@
 #             column descriptions referenced in `main.R` and `verify.R`.
 # ------------------------------------------------------------------------------
 
-INTERACTIVE_LANGUAGE_PROMPT <- "Select language implementation:\n[1] R\n\nEnter choice:"
 
-INTERACTIVE_REPORT_MENU_TITLE <- "Report Selection Menu"
-INTERACTIVE_REPORT_MENU_OPTIONS <- c(
-  "[1] Process dataset (ingest to filter)",
-  "[2] Generate reports and summary"
 )
 INTERACTIVE_REPORT_MENU_PROMPT <- "Enter choice:"
 
