@@ -49,8 +49,6 @@ validate_schema <- function(df) {
 
   if (exists("log_info", mode = "function")) {
     log_info("validate_schema(): rows=%d", row_count)
-  } else {
-    message(sprintf("validate_schema(): rows=%d", row_count))
   }
 
   # No duplicated headers -----------------------------------------------------
@@ -71,7 +69,7 @@ validate_schema <- function(df) {
     "FundingYear", "TypeOfWork",
     "StartDate", "ActualCompletionDate",
     "ApprovedBudgetForContract", "ContractCost",
-    "Contractor", "Latitude", "Longitude"
+    "Contractor"
   )
   missing_required <- setdiff(required_cols, nms)
   if (length(missing_required) > 0L) {
@@ -80,6 +78,15 @@ validate_schema <- function(df) {
         "validate_schema(): missing required columns: %s.",
         paste(missing_required, collapse = ", ")
       ),
+      call. = FALSE
+    )
+  }
+
+  has_canonical_coords <- all(c("Latitude", "Longitude") %in% nms)
+  has_synonym_coords <- all(c("ProjectLatitude", "ProjectLongitude") %in% nms)
+  if (!has_canonical_coords && !has_synonym_coords) {
+    stop(
+      "validate_schema(): missing coordinates (Latitude/Longitude or ProjectLatitude/ProjectLongitude).",
       call. = FALSE
     )
   }

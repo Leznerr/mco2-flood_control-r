@@ -10,6 +10,7 @@ source_module <- function(...) {
   stop(sprintf("Unable to locate module '%s' from test.", rel))
 }
 
+source_module("R", "utils_log.R")
 source_module("R", "ingest.R")
 source_module("R", "validate.R")
 
