@@ -10,16 +10,35 @@
 # ------------------------------------------------------------------------------
 
 .load_utils_format <- function() {
+  helpers_exist <- all(
+    vapply(
+      c("safe_mean", "safe_sum", "safe_median", "minmax_0_100", "format_dataframe"),
+      exists,
+      logical(1),
+      inherits = TRUE
+    )
+  )
+  if (helpers_exist) {
+    return(invisible(TRUE))
+  }
+
   caller <- sys.frame(1)
-  ofile <- caller$ofile
-  if (is.null(ofile)) {
-    stop(".load_utils_format(): unable to determine the calling file location.")
+  dirs <- c(
+    if (!is.null(caller$ofile)) dirname(caller$ofile) else NA_character_,
+    if (!is.null(caller$filename)) dirname(caller$filename) else NA_character_,
+    getwd()
+  )
+  dirs <- unique(Filter(function(path) !is.na(path) && nzchar(path), dirs))
+
+  for (dir in dirs) {
+    utils_path <- file.path(normalizePath(dir, mustWork = FALSE), "utils_format.R")
+    if (file.exists(utils_path)) {
+      sys.source(utils_path, envir = parent.frame())
+      return(invisible(TRUE))
+    }
   }
-  utils_path <- file.path(normalizePath(dirname(ofile)), "utils_format.R")
-  if (!file.exists(utils_path)) {
-    stop(sprintf(".load_utils_format(): expected helper file at '%s' but it was not found.", utils_path))
-  }
-  sys.source(utils_path, envir = parent.frame())
+
+  stop(".load_utils_format(): unable to locate 'utils_format.R' in the expected directories.")
 }
 
 .load_utils_format()
