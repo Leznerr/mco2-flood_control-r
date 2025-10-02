@@ -31,19 +31,6 @@ for (path_parts in modules) {
 .pipeline_state <- new.env(parent = emptyenv())
 .pipeline_state$interactive <- FALSE
 
-.get_cli_helper <- function(name) {
-  if (exists(name, mode = "function", inherits = TRUE)) {
-    get(name, mode = "function", inherits = TRUE)
-  } else {
-    stop(sprintf("Required CLI helper '%s' not found. Ensure utils_cli.R is sourced.", name), call. = FALSE)
-  }
-}
-
-.pipeline_state$cli <- list(
-  print_menu = .get_cli_helper("print_menu"),
-  read_choice = .get_cli_helper("read_choice"),
-  prompt_back_to_menu = .get_cli_helper("prompt_back_to_menu")
-)
 
 .log_stage <- function(name) {
   if (!isTRUE(.pipeline_state$interactive)) {
@@ -127,10 +114,7 @@ for (path_parts in modules) {
   if (isTRUE(opts$interactive)) {
     .pipeline_state$interactive <- TRUE
     df_filtered <- NULL
-    cli <- .pipeline_state$cli
-    repeat {
-      cli$print_menu()
-      ch <- cli$read_choice()
+
       if (identical(ch, 1L)) {
         df_filtered <- .pipeline_process(input_path, interactive = TRUE)
       } else if (identical(ch, 2L)) {
@@ -138,7 +122,7 @@ for (path_parts in modules) {
           df_filtered <- .pipeline_process(input_path, interactive = TRUE)
         }
         .pipeline_reports(df_filtered, outdir)
-        go_back <- cli$prompt_back_to_menu()
+
         cat("\n")
         if (!go_back) break
       } else {
