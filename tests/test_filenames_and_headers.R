@@ -69,7 +69,7 @@ test_that("output filenames and headers align to spec", {
     expect_true(all(file.exists(paths)))
     expect_setequal(basename(paths), unlist(REPORT_FILES))
 
-    header1 <- readLines(file.path(outdir, REPORT_FILES$r1), n = 1L)
+    header1 <- readLines(file.path(outdir, REPORT_FILES$report1), n = 1L)
 
   })
 })

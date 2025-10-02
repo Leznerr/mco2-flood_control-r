@@ -25,39 +25,53 @@ if (!exists("%||%", mode = "function")) {                     # local fallback w
   `%||%` <- function(lhs, rhs) if (!is.null(lhs)) lhs else rhs
 }
 
-.path_join <- function(...) {
+.path_join <- function(...) {                                   # minimal wrapper around file.path()
   parts <- list(...)
   parts <- Filter(function(x) {
     is.character(x) && length(x) == 1L && !is.na(x) && nzchar(x)
   }, parts)
-  if (!length(parts)) return("")
+  if (!length(parts)) return(character())
   do.call(file.path, parts)
 }
 
-REPORT_FILES <- list(
-  r1 = "report1.csv",
-  r2 = "report2.csv",
-  r3 = "report3.csv",
+REPORT_FILES <- list(                                           # canonical filenames for exports
+  report1 = "report1.csv",
+  report2 = "report2.csv",
+  report3 = "report3.csv",
   summary = "summary.json"
 )
 
 path_report1 <- function(outdir) {
-  .path_join(outdir, REPORT_FILES$r1)
+  .path_join(outdir, REPORT_FILES$report1)
 }
 
 path_report2 <- function(outdir) {
-  .path_join(outdir, REPORT_FILES$r2)
+  .path_join(outdir, REPORT_FILES$report2)
 }
 
 path_report3 <- function(outdir) {
-  .path_join(outdir, REPORT_FILES$r3)
+  .path_join(outdir, REPORT_FILES$report3)
 }
 
 path_summary <- function(outdir) {
   if (missing(outdir) || !is.character(outdir) || length(outdir) != 1L || is.na(outdir)) {
     stop("path_summary(): 'outdir' must be a non-NA character scalar.")
   }
-  .path_join(outdir, REPORT_FILES$summary)
+  file.path(outdir, REPORT_FILES$summary)
+}
+
+io_exports <- list(                                             # make helpers visible when sourced locally
+  .path_join = .path_join,
+  REPORT_FILES = REPORT_FILES,
+  path_report1 = path_report1,
+  path_report2 = path_report2,
+  path_report3 = path_report3,
+  path_summary = path_summary
+)
+
+export_env <- globalenv()
+for (nm in names(io_exports)) {
+  assign(nm, io_exports[[nm]], envir = export_env)
 }
 
 
