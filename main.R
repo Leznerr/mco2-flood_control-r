@@ -31,6 +31,7 @@ for (path_parts in modules) {
 .pipeline_state <- new.env(parent = emptyenv())
 .pipeline_state$interactive <- FALSE
 
+
 .log_stage <- function(name) {
   if (!isTRUE(.pipeline_state$interactive)) {
     log_banner(sprintf("Stage: %s", name))
@@ -113,9 +114,7 @@ for (path_parts in modules) {
   if (isTRUE(opts$interactive)) {
     .pipeline_state$interactive <- TRUE
     df_filtered <- NULL
-    repeat {
-      print_menu()
-      ch <- read_choice()
+
       if (identical(ch, 1L)) {
         df_filtered <- .pipeline_process(input_path, interactive = TRUE)
       } else if (identical(ch, 2L)) {
@@ -123,7 +122,7 @@ for (path_parts in modules) {
           df_filtered <- .pipeline_process(input_path, interactive = TRUE)
         }
         .pipeline_reports(df_filtered, outdir)
-        go_back <- prompt_back_to_menu()
+
         cat("\n")
         if (!go_back) break
       } else {
