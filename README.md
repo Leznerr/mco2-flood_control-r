@@ -35,7 +35,34 @@ Rscript main.R --input dpwh_flood_control_projects.csv --outdir outputs
 
 Key outputs (written to `--outdir`, defaults to `outputs/`):
 
+- `report1_regional_summary.csv`
+- `report2_contractor_ranking.csv`
+- `report3_annual_trends.csv`
+- `summary.json`
 
+These filenames come directly from requirement REQ-0010. All report CSVs are
+formatted via `format_dataframe()` which renders numeric measures with comma
+separators and two decimal places (presentation only – no math is modified).
+
+### Quick verification of REQ-0010
+
+To confirm the writers and filenames are wired correctly, execute the miniature
+fixture that ships with the repository:
+
+```bash
+Rscript main.R --input sample-data/tiny_fixture.csv --outdir outputs
+```
+
+After the run you should see the four artifacts listed above inside the
+`outputs/` directory. Re-running the pipeline will overwrite them atomically.
+If you only want to smoke-test the IO helpers without running the full
+pipeline, you can source the module directly:
+
+```bash
+Rscript -e "source('R/io.R'); stopifnot(all(c('write_report1','write_report2','write_report3','write_summary_json') %in% ls())); cat('IO OK\n')"
+```
+
+Both commands should complete without errors when REQ-0010 has been satisfied.
 
 ## Tests
 
