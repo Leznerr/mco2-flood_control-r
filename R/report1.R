@@ -10,7 +10,6 @@
 # ------------------------------------------------------------------------------
 
 
-  source("R/utils_format.R")
 }
 
 suppressPackageStartupMessages({                             # quiet load for CLI/tests
