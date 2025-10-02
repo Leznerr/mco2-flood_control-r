@@ -21,12 +21,17 @@ build_summary <- function(df) {                              # assemble scalar m
   total_savings <- sum(df$CostSavings, na.rm = TRUE)
 
   if (!is.finite(total_savings) || abs(total_savings) > 1e13) {
+    warn_msg <- sprintf(
+      "CostSavings sum implausible (%s) -> NA.",
+      format(total_savings, scientific = TRUE)
+    )
+
     if (exists("log_warn", mode = "function")) {
-      log_warn(
-        "CostSavings sum implausible (%s) -> NA.",
-        format(total_savings, scientific = TRUE)
-      )
+      log_warn(warn_msg)
+    } else {
+      warning(warn_msg)
     }
+
     total_savings <- NA_real_
   }
 
