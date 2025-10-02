@@ -9,6 +9,10 @@
 #             schema ordering and formatted values).
 # ------------------------------------------------------------------------------
 
+if (!exists("minmax_0_100", mode = "function")) {          # ensure shared helpers available
+  source("R/utils_format.R")
+}
+
 suppressPackageStartupMessages({                             # quiet load for CLI/tests
   library(dplyr)
 })
@@ -19,18 +23,7 @@ build_report1 <- function(df) {                               # build report 1 s
   report <- df %>%
     group_by(Region, MainIsland) %>%
     summarise(
-      TotalBudget = safe_sum(ApprovedBudgetForContract),
-      MedianSavings = safe_median(CostSavings),
-      AvgDelay = safe_mean(CompletionDelayDays),
-      HighDelayPct = safe_mean(as.numeric(CompletionDelayDays > 30)) * 100,
-      .groups = "drop"
-    ) %>%
-    mutate(
-      EfficiencyRaw = {
-        adj_delay <- ifelse(is.na(AvgDelay), NA_real_, pmax(AvgDelay, 1))
-        (MedianSavings / adj_delay) * 100
-      },
-      EfficiencyScore = minmax_0_100(EfficiencyRaw)
+
     ) %>%
     select(Region, MainIsland, TotalBudget, MedianSavings, AvgDelay, HighDelayPct, EfficiencyScore) %>%
     arrange(desc(EfficiencyScore))
