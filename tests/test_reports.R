@@ -38,13 +38,6 @@ ensure_outputs_ready <- function() {
   r3 <- report_overrun_trends(df_filtered)
   sumry <- build_summary(df_filtered)
   ensure_outdir("outputs")
-  fmt_opts <- list(
-
-    exclude_regex = NULL,
-    comma_strings = TRUE,
-    digits = 2
-  )
-
 }
 
 ensure_outputs_ready()

@@ -49,20 +49,13 @@ test_that("output filenames and headers align to spec", {
     report3 <- report_overrun_trends(filtered)
     summary <- build_summary(filtered)
 
-    fmt_opts <- list(
-
-      comma_strings = TRUE,
-      digits = 2,
-      exclude_regex = NULL
-    )
-
     outdir <- file.path(tmp, "outputs")
     dir.create(outdir, showWarnings = FALSE)
 
     paths <- c(
-      write_report1(report1, outdir, fmt_opts),
-      write_report2(report2, outdir, fmt_opts),
-      write_report3(report3, outdir, fmt_opts),
+      write_report1(report1, outdir),
+      write_report2(report2, outdir),
+      write_report3(report3, outdir),
       write_summary_outdir(summary, outdir)
     )
 
