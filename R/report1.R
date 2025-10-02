@@ -13,9 +13,7 @@ suppressPackageStartupMessages({                             # quiet load for ti
   library(dplyr)
 })
 
-if (!exists("safe_sum", mode = "function")) {               # ensure shared helpers available
-  source("R/utils_format.R")
-}
+
 
 build_report1 <- function(df) {
   stopifnot(is.data.frame(df))
