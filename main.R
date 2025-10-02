@@ -32,6 +32,7 @@ for (path_parts in modules) {
 .pipeline_state$interactive <- FALSE
 
 
+
 .log_stage <- function(name) {
   if (!isTRUE(.pipeline_state$interactive)) {
     log_banner(sprintf("Stage: %s", name))

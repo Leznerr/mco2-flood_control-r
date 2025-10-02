@@ -1,15 +1,9 @@
 # utils_cli.R
 # ------------------------------------------------------------------------------
-# Purpose   : Centralise command-line interface behaviour for the pipeline.
-#             Provides OptionParser construction, argument validation, and
-#             lightweight path normalisation that works cross-platform.
-# Contract  :
-#   - build_cli() -> OptionParser (from optparse).
-#   - validate_cli_args(args) -> stops with informative errors when flags
-#     are missing or malformed.
-#   - normalize_cli_paths(args) -> returns same list with paths normalised.
-# Rubric    : Simplicity (single module), Correctness (fail-fast), UX (clear
-#             help strings and error messages), Readability (formal comments).
+# Purpose   : Provide the lightweight interactive CLI helpers required by the
+#             flood-control reporting pipeline. These helpers intentionally use
+#             only base R features so that they work in constrained runtime
+#             environments.
 # ------------------------------------------------------------------------------
 
 suppressPackageStartupMessages({                             # avoid optparse startup chatter during CLI usage
@@ -77,5 +71,4 @@ print_menu <- function() {
 
 prompt_back_to_menu <- function() {
   cat("Back to Report Selection (Y/N): ")
-
 
