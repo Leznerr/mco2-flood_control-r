@@ -14,6 +14,8 @@
 suppressPackageStartupMessages({
   # readr provides fast CSV ingestion and parse-problem reporting.
   library(readr)
+  # tibble ensures tibble methods are available when consumers inspect results.
+  library(tibble)
 })
 
 # --------------------------- Configuration section ----------------------------
@@ -36,17 +38,6 @@ ALLOW_BOM <- TRUE  # boolean; informational only (readr::read_csv strips BOM saf
     log_info("%s", msg)                                                 # delegate to project logger with printf semantics
   } else {                                                               # otherwise fallback to base message
     message(sprintf("[INFO]  %s", msg))                                  # print standardized info log
-  }
-  return(invisible(NULL))
-}
-
-# Emit a warning message; integrates with project logger if present.
-.log_warn <- function(fmt, ...) {                                        # define function for warn logs
-  msg <- sprintf(fmt, ...)                                               # format the message string
-  if (exists("log_warn", mode = "function")) {                           # if project-wide logger exists
-    log_warn("%s", msg)                                                 # delegate to project logger with printf semantics
-  } else {                                                               # otherwise fallback to base message
-    message(sprintf("[WARN]  %s", msg))                                  # print standardized warn log
   }
   return(invisible(NULL))
 }
@@ -121,14 +112,6 @@ ingest_csv <- function(path) {                                            # defi
   # ---- Operational logging (concise, structured) -----------------------------
   .log_info("Ingested '%s' | rows=%d, cols=%d, parse_issues=%d",           # print one-line ingest summary
             path, n_rows, n_cols, n_problems)
-  if (n_problems > 0L) {                                                   # if any parse issues occurred
-    # Show a tiny preview (first 3) to aid debugging while keeping logs tidy.
-    preview_n <- min(3L, n_problems)                                       # compute preview size
-    .log_warn("Preview of parse issues (showing %d of %d):", preview_n, n_problems) # header for preview
-    utils::capture.output(                                                 # capture print to avoid dumping entire tibble
-      print(utils::head(problems_tbl, preview_n)),                         # print only first few issues
-      file = "")                                                           # print to console
-  }
 
   # ---- Return the raw dataframe (no transformations applied) -----------------
   return(df)                                                               # yield the ingested tibble to caller
