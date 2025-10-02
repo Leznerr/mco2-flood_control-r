@@ -67,6 +67,7 @@ format_summary_value <- function(value) {
 }
 
 run_interactive_mode <- function(args) {
+
   dataset <- NULL
 
   repeat {
