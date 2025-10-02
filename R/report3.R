@@ -9,30 +9,36 @@ suppressPackageStartupMessages({                             # quiet load
   library(dplyr)
 })
 
-report_overrun_trends <- function(df) {                      # build report 3 time-series summary
-  if (!is.data.frame(df)) stop("report_overrun_trends(): 'df' must be a data frame.")
-  summary <- df %>%
-    group_by(FundingYear, TypeOfWork) %>%
+build_report3 <- function(df) {                              # build report 3 time-series summary
+  if (!is.data.frame(df)) stop("build_report3(): 'df' must be a data frame.")
+
+  df %>%
+    group_by(TypeOfWork, FundingYear) %>%
     summarise(
       TotalProjects = dplyr::n(),
-      AvgSavings = safe_mean(CostSavings),
-      OverrunRate = 100 * safe_mean(CostSavings < 0),
+      AvgSavings = mean(CostSavings, na.rm = TRUE),
+      OverrunRate = 100 * mean(CostSavings < 0, na.rm = TRUE),
       .groups = "drop"
-    )
-
-  baseline <- summary %>%
-    filter(FundingYear == 2021) %>%
-    transmute(TypeOfWork, Base2021 = AvgSavings)
-
-  summary %>%
-    left_join(baseline, by = "TypeOfWork") %>%
-    mutate(
-      YoYChange = dplyr::if_else(
-        FundingYear == 2021 | is.na(Base2021) | Base2021 == 0,
-        NA_real_,
-        ((AvgSavings - Base2021) / abs(Base2021)) * 100
-      )
     ) %>%
-    select(FundingYear, TypeOfWork, TotalProjects, AvgSavings, OverrunRate, YoYChange) %>%
-    arrange(FundingYear, desc(AvgSavings), TypeOfWork)
+    mutate(
+      AvgSavings = ifelse(is.nan(AvgSavings), NA_real_, AvgSavings),
+      OverrunRate = ifelse(is.nan(OverrunRate), NA_real_, OverrunRate)
+    ) %>%
+    arrange(TypeOfWork, FundingYear) %>%
+    group_by(TypeOfWork) %>%
+    mutate(
+      PrevAvg = dplyr::lag(AvgSavings),
+      YoYChange = dplyr::if_else(
+        is.na(PrevAvg) | PrevAvg == 0,
+        NA_real_,
+        100 * (AvgSavings - PrevAvg) / abs(PrevAvg)
+      ),
+      YoYChange = ifelse(is.na(YoYChange), "", as.character(YoYChange))
+    ) %>%
+    ungroup() %>%
+    select(-PrevAvg) %>%
+    arrange(FundingYear, desc(AvgSavings), TypeOfWork) %>%
+    select(FundingYear, TypeOfWork, TotalProjects, AvgSavings, OverrunRate, YoYChange)
 }
+
+report_overrun_trends <- build_report3
