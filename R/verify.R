@@ -19,7 +19,6 @@ suppressPackageStartupMessages({
   library(jsonlite)
 })
 
-`%||%` <- function(lhs, rhs) if (!is.null(lhs)) lhs else rhs
 
 
 .status_label <- function(ok) if (ok) "[PASS]" else "[FAIL]"
@@ -41,22 +40,6 @@ suppressPackageStartupMessages({
   readr::read_csv(path, col_types = readr::cols(.default = readr::col_character()))
 }
 
-.default_report_files <- function() {
-  list(
-    r1 = "report1_regional_efficiency.csv",
-    r2 = "report2_top_contractors.csv",
-    r3 = "report3_overrun_trends.csv",
-    summary = "summary.json"
-  )
-}
-
-.expected_preview_titles <- function() {
-  c(
-    "Report 1: Regional Flood Mitigation Efficiency",
-    "Report 2: Top Contractors Performance Ranking",
-    "Report 3: Annual Project Type Cost Overrun Trends"
-  )
-}
 
 verify_outputs <- function(dataset, reports, summary, outdir, fmt_opts) {
   if (!dir.exists(outdir)) {
@@ -67,16 +50,6 @@ verify_outputs <- function(dataset, reports, summary, outdir, fmt_opts) {
   }
   if (!is.list(summary)) stop("verify_outputs(): 'summary' must be a list.")
 
-  report_files <- if (exists("REPORT_FILES", inherits = TRUE) && is.list(REPORT_FILES)) {
-    REPORT_FILES
-  } else {
-    .default_report_files()
-  }
-
-  path1 <- file.path(outdir, report_files$r1)
-  path2 <- file.path(outdir, report_files$r2)
-  path3 <- file.path(outdir, report_files$r3)
-  path_summary_json <- file.path(outdir, report_files$summary)
 
   report_lines <- c(
     "Verification Report",
@@ -92,6 +65,7 @@ verify_outputs <- function(dataset, reports, summary, outdir, fmt_opts) {
   }
 
   report_lines <- c(report_lines, "Schema & Formatting", "----------------------")
+
 
 
   r1_file <- .read_csv_as_character(path1)
@@ -196,7 +170,6 @@ verify_outputs <- function(dataset, reports, summary, outdir, fmt_opts) {
     sprintf("Comma formatting enabled: %s", isTRUE(fmt_opts$comma_strings)),
     sprintf("Numeric digits: %s", fmt_opts$digits)
   )
-
 
 
   verification_path <- file.path(outdir, "verification_report.txt")

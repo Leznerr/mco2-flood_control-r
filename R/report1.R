@@ -15,7 +15,7 @@ suppressPackageStartupMessages({                             # quiet load for CL
 
 report_regional_efficiency <- function(df) {                 # build report 1 summary
   if (!is.data.frame(df)) stop("report_regional_efficiency(): 'df' must be a data frame.")
-  df %>%
+  reg_summ <- df %>%
     group_by(Region, MainIsland) %>%
     summarise(
       TotalApprovedBudget = safe_sum(ApprovedBudgetForContract),
