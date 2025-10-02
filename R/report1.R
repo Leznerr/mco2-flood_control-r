@@ -10,6 +10,11 @@
 # ------------------------------------------------------------------------------
 
 
+suppressPackageStartupMessages({                             # quiet load
+  library(dplyr)
+})
+
+
 build_report1 <- function(df) {
   stopifnot(is.data.frame(df))
 
