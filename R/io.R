@@ -25,12 +25,14 @@ if (!exists("%||%", mode = "function")) {                     # local fallback w
   `%||%` <- function(lhs, rhs) if (!is.null(lhs)) lhs else rhs
 }
 
-.path_join <- function(...) {                                   # minimal wrapper around file.path()
+.path_join <- function(...) {                                   # deterministic join that drops empty inputs
   parts <- list(...)
   parts <- Filter(function(x) {
     is.character(x) && length(x) == 1L && !is.na(x) && nzchar(x)
   }, parts)
-  if (!length(parts)) return(character())
+  if (!length(parts)) {
+    stop(".path_join(): at least one non-empty character scalar is required.")
+  }
   do.call(file.path, parts)
 }
 
@@ -41,28 +43,34 @@ REPORT_FILES <- list(                                           # canonical file
   summary = "summary.json"
 )
 
+.resolve_report_path <- function(outdir, key) {                 # single place that validates path inputs
+  if (missing(outdir) || !is.character(outdir) || length(outdir) != 1L || is.na(outdir) || !nzchar(outdir)) {
+    stop(sprintf("%s: 'outdir' must be a non-NA character scalar.", key))
+  }
+  if (!key %in% names(REPORT_FILES)) {
+    stop(sprintf("Unknown report key '%s'.", key))
+  }
+  .path_join(outdir, REPORT_FILES[[key]])
+}
+
 path_report1 <- function(outdir) {
-  .path_join(outdir, REPORT_FILES$report1)
+  .resolve_report_path(outdir, "report1")
 }
 
 path_report2 <- function(outdir) {
-  .path_join(outdir, REPORT_FILES$report2)
+  .resolve_report_path(outdir, "report2")
 }
 
 path_report3 <- function(outdir) {
-  .path_join(outdir, REPORT_FILES$report3)
+  .resolve_report_path(outdir, "report3")
 }
 
 path_summary_json <- function(outdir) {
-  .path_join(outdir, REPORT_FILES$summary)
+  .resolve_report_path(outdir, "summary")
 }
 
 path_summary <- function(outdir) {
-  path <- path_summary_json(outdir)
-  if (!length(path)) {
-    stop("path_summary(): 'outdir' must be a non-NA character scalar.")
-  }
-  path
+  path_summary_json(outdir)
 }
 
 io_exports <- list(                                             # make helpers visible when sourced locally
@@ -75,10 +83,7 @@ io_exports <- list(                                             # make helpers v
   path_summary = path_summary
 )
 
-export_env <- globalenv()
-for (nm in names(io_exports)) {
-  assign(nm, io_exports[[nm]], envir = export_env)
-}
+list2env(io_exports, envir = globalenv())
 
 
 # ---- readr write compatibility (pre-2.0 vs >=2.0) ----------------------------
