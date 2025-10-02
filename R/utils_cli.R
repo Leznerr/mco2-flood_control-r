@@ -1,11 +1,11 @@
 # utils_cli.R
 # ------------------------------------------------------------------------------
-
-# ------------------------------------------------------------------------------
+------------------------------------------------------------
 
 suppressPackageStartupMessages({
   library(optparse)
 })
+
 
 
 build_cli <- function() {
@@ -54,9 +54,6 @@ normalize_cli_paths <- function(args) {
 }
 
 
-}
-
-
 print_menu <- function() {
   cat("Select Language Implementation:\n")
   cat("[1] Load the file\n")
@@ -67,4 +64,5 @@ print_menu <- function() {
 
 prompt_back_to_menu <- function() {
   cat("Back to Report Selection (Y/N): ")
+
 
