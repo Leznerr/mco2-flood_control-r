@@ -28,7 +28,7 @@ build_summary <- function(df) {                              # assemble scalar m
   if (length(savings_vec) == 0L || all(is.na(savings_vec))) {
     total_savings <- NA_real_
   } else {
-    total_savings <- sum(savings_vec, na.rm = TRUE)
+    total_savings <- round(sum(savings_vec, na.rm = TRUE), 2)
     if (!is.finite(total_savings)) {
       if (exists("log_warn", mode = "function")) {
         log_warn("Summary: total_savings non-finite -> null (value=%g).", total_savings)
